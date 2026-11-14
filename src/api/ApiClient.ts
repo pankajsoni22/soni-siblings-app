@@ -18,6 +18,11 @@ interface ApiClientOptions {
 }
 
 const EXPIRY_MARGIN_MS = 60_000;
+/** Apps Script normally answers in 1–3 s; give up after this. */
+const REQUEST_TIMEOUT_MS = 30_000;
+const WRITE_ACTIONS = new Set<Action>([
+  'saveTransaction', 'setRepaid', 'deleteTransaction', 'restoreTransaction', 'savePartners', 'saveSettings', 'saveUser', 'removeUser'
+]);
 
 /**
  * Typed client for the Apps Script API. Every method resolves with the response `data`
@@ -138,10 +143,18 @@ export class ApiClient {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // keep: application/json triggers a CORS preflight
         body: JSON.stringify({ action, token: creds.token, payload }),
-        redirect: 'follow'
+        redirect: 'follow',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
       });
-    } catch {
-      throw new ApiError('NETWORK', 'Could not reach the server. Check your connection.');
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === 'TimeoutError';
+      if (timedOut && WRITE_ACTIONS.has(action)) {
+        // The server may have finished the write after we stopped waiting: retrying blindly could save twice.
+        throw new ApiError('NETWORK', 'The server is taking too long. Your change may still have been saved; reload and check before trying again.');
+      }
+      throw new ApiError('NETWORK', timedOut
+        ? 'The server is taking too long to answer. Please try again.'
+        : navigator.onLine === false ? "You're offline. Check your connection and try again." : 'Could not reach the server. Check your connection.');
     }
 
     let json: ApiResponse<T>;

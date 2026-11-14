@@ -1,8 +1,11 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import RequireRole from './auth/RequireRole.tsx';
 import { useAuth } from './auth/useAuth.ts';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import Nav from './components/Nav.tsx';
+import OfflineBanner from './components/OfflineBanner.tsx';
+import { useFocusOnNavigate } from './components/useFocusOnNavigate.ts';
 import SessionExpiredDialog from './components/SessionExpiredDialog.tsx';
 import TopBar from './components/TopBar.tsx';
 import DashboardPage from './pages/DashboardPage.tsx';
@@ -21,37 +24,45 @@ export default function App() {
   let content: ReactNode;
   switch (status) {
     case 'loading':
-      content = <main><p className="muted center-text">Loading…</p></main>;
+      content = <main id="main"><p className="muted center-text">Loading…</p></main>;
       break;
     case 'checking':
-      content = <main><p className="muted center-text">Checking access…</p></main>;
+      content = <main id="main"><p className="muted center-text">Checking access…</p></main>;
       break;
     case 'signedOut':
-      content = <main><SignInPage /></main>;
+      content = <main id="main"><SignInPage /></main>;
       break;
     case 'forbidden':
-      content = <main><NoAccessPage /></main>;
+      content = <main id="main"><NoAccessPage /></main>;
       break;
     case 'ready':
     case 'expired':
       // Keep the app mounted while expired so unsaved work survives a re-sign-in.
-      content = (
-        <div className="shell">
-          <Nav />
-          <main className="shell-main">
-            <AppRoutes />
-          </main>
-        </div>
-      );
+      content = <Shell />;
       break;
   }
 
   return (
     <>
+      <a className="skip-link" href="#main">Skip to content</a>
       <TopBar />
-      {content}
+      <OfflineBanner />
+      <ErrorBoundary>{content}</ErrorBoundary>
       {status === 'expired' && <SessionExpiredDialog />}
     </>
+  );
+}
+
+function Shell() {
+  const mainRef = useRef<HTMLElement>(null);
+  useFocusOnNavigate(mainRef);
+  return (
+    <div className="shell">
+      <Nav />
+      <main id="main" ref={mainRef} className="shell-main">
+        <AppRoutes />
+      </main>
+    </div>
   );
 }
 

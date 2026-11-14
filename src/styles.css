@@ -6,6 +6,8 @@
   --border: #dde1e6;
   --accent: #2f6fde;
   --accent-text: #ffffff;
+  /* accent used as text on tinted backgrounds; darker so it keeps 4.5:1 contrast */
+  --accent-strong: #1d4fae;
   --danger: #c4372c;
   --overlay: rgb(0 0 0 / 0.4);
   --good: #1d7a46;
@@ -29,6 +31,7 @@
     --border: #343841;
     --accent: #6b9cf0;
     --accent-text: #0d1117;
+    --accent-strong: #8fb4f5;
     --danger: #f07167;
     --overlay: rgb(0 0 0 / 0.6);
     --good: #6fd39b;
@@ -157,7 +160,7 @@ h1 { font-size: 1.5rem; margin: 0 0 8px; }
   padding: 8px 4px; min-height: 56px;
   color: var(--muted); text-decoration: none; font-size: 11px;
 }
-.nav-link.active { color: var(--accent); font-weight: 600; }
+.nav-link.active { color: var(--accent-strong); font-weight: 600; }
 .nav-icon { font-size: 18px; line-height: 1; }
 
 @media (min-width: 768px) {
@@ -364,6 +367,8 @@ legend { font-size: 14px; font-weight: 600; padding: 0 4px; }
 .col-bar { width: min(24px, 70%); background: var(--chart); border-radius: 4px 4px 0 0; }
 .col:hover .col-bar, .col:focus-visible .col-bar { filter: brightness(1.12); }
 .col-label { font-size: 11px; color: var(--muted); padding-top: 4px; white-space: nowrap; min-height: 1.4em; }
+/* Phones: every other month label, so they don't run together (hover/focus still names each month) */
+@media (max-width: 559px) { .col-label-minor { visibility: hidden; } }
 .col-tip {
   display: none; position: absolute; bottom: calc(100% - 24px); left: 50%; transform: translateX(-50%);
   z-index: 5; width: max-content; max-width: 220px; flex-direction: column; gap: 2px;
@@ -377,6 +382,17 @@ legend { font-size: 14px; font-weight: 600; padding: 0 4px; }
 .data-table th, .data-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: right; }
 .data-table th:first-child, .data-table thead th:first-child { text-align: left; }
 .data-table td { font-variant-numeric: tabular-nums; }
+
+/* ---- Resilience and accessibility ---- */
+
+.skip-link {
+  position: absolute; left: 8px; top: -48px; z-index: 30;
+  padding: 8px 12px; border-radius: 8px; background: var(--accent); color: var(--accent-text); text-decoration: none;
+}
+.skip-link:focus { top: 8px; }
+.offline-banner { padding: 8px 16px; background: var(--pending-bg); color: var(--pending); font-size: 14px; text-align: center; }
+.error-detail { font-size: 13px; overflow-wrap: anywhere; }
+h1[tabindex="-1"]:focus { outline: none; }
 
 /* ---- Admin screens ---- */
 

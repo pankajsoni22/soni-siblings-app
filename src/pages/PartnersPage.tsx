@@ -6,6 +6,7 @@ import { useQuery } from '../api/useQuery.ts';
 import PageHeader from '../components/PageHeader.tsx';
 import { ErrorState, Loading } from '../components/States.tsx';
 import { useToast } from '../components/toastContext.ts';
+import { useUnsavedChangesWarning } from '../components/useUnsavedChangesWarning.ts';
 import { activeTotalPct, moveRow, newRow, rowsFrom, validatePartners, type PartnerErrors, type PartnerRow } from '../lib/partnersForm.ts';
 
 export default function PartnersPage() {
@@ -35,6 +36,7 @@ function PartnersEditor({ partners, onSaved }: { partners: Partner[]; onSaved: (
   const totalOk = total === 100;
   const comparable = (rs: PartnerRow[]) => JSON.stringify(rs.map(r => [r.id ?? null, r.name, r.pct, r.active]));
   const dirty = comparable(rows) !== comparable(rowsFrom(partners));
+  useUnsavedChangesWarning(dirty && !saving);
 
   const update = (key: string, patch: Partial<PartnerRow>) => {
     setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));

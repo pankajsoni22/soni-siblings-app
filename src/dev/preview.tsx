@@ -24,6 +24,26 @@ const auth: AuthContextValue = {
   signOut: () => {}
 };
 
+/**
+ * preview.html?axe#/route runs the axe-core accessibility checker on that screen after it loads
+ * and writes the findings into the page (and the console), so a headless browser can read them
+ * with --dump-dom.
+ */
+if (new URLSearchParams(location.search).has('axe')) {
+  window.setTimeout(() => {
+    void import('axe-core').then(async ({ default: axe }) => {
+      const result = await axe.run(document, { resultTypes: ['violations'] });
+      const lines = result.violations.map(v =>
+        `${v.impact ?? 'n/a'} | ${v.id} | ${v.help} | ${v.nodes.length} | ${v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' ; ')}`);
+      const out = document.createElement('pre');
+      out.id = 'axe-results';
+      out.textContent = `AXE ${location.hash} violations=${result.violations.length}\n${lines.join('\n')}`;
+      document.body.append(out);
+      console.info(out.textContent);
+    });
+  }, 1500);
+}
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 

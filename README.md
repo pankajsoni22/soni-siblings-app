@@ -82,11 +82,16 @@ npm test           # frontend unit tests (Vitest)
 npm run test:backend   # runs apps-script/*.gs against a mocked Sheet
 npm run status:backend # lists the files clasp would push
 npm run push:backend   # pushes apps-script/ to the Apps Script project
+npm run smoke:backend  # checks the live /exec URL answers and refuses unsigned requests
 ```
 
 `test:backend` covers sign-in, roles and the permission table, users, partners, settings, saving and editing transactions (recalculation, conflicts, inactive partners), delete/undo/restore, history, listing, reports, the shared money cases, and how text and dates are stored. It only checks the logic; it does not replace the security checklist against the real deployment.
 
 Port 8000 matches the `http://localhost:8000` origin registered on the OAuth client. Local dev talks to the deployed `/exec` API.
+
+Accessibility check: add `?axe` to the preview URL (`preview.html?axe#/transactions`); after the screen loads, axe-core's findings are printed at the bottom of the page and in the console.
+
+Before go-live and after changes to sign-in, roles or deployment, run [documents/security-checklist.md](documents/security-checklist.md).
 
 To look at the screens without signing in or a backend, open **http://localhost:8000/soni-siblings-app/preview.html** while `npm run dev` runs. It is the real app, signed in as a fake admin, with about six months of mock entries (`src/dev/mockBackend.ts`). Add `#/?period=thisFY` to open the dashboard on a given period (`today`, `thisMonth`, `lastMonth`, `thisQuarter`, `lastQuarter`, `thisFY`, `lastFY`); the same works on `#/transactions?period=…`.
 

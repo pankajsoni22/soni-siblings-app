@@ -53,7 +53,9 @@ export default function MonthlyChart({ months }: { months: Report['byMonth'] }) 
                 <div className="col-bar-area">
                   <div className="col-bar" style={{ height: `${top > 0 ? (m.commission / top) * 100 : 0}%` }} />
                 </div>
-                <span className="col-label" aria-hidden="true">{i % labelEvery === 0 ? formatMonth(m.month).replace(' 20', " '") : ''}</span>
+                <span className={`col-label${(i / labelEvery) % 2 === 1 && months.length > 6 ? ' col-label-minor' : ''}`} aria-hidden="true">
+                  {i % labelEvery === 0 ? formatMonth(m.month).replace(' 20', " '") : ''}
+                </span>
                 <div className="col-tip" role="tooltip">
                   <strong>{formatMonth(m.month)}</strong>
                   <span>Commission <Money value={m.commission} /></span>

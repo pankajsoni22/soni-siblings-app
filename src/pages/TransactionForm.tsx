@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog.tsx';
 import FormField from '../components/FormField.tsx';
 import Money from '../components/Money.tsx';
 import { useToast } from '../components/toastContext.ts';
+import { useUnsavedChangesWarning } from '../components/useUnsavedChangesWarning.ts';
 import { describedBy } from '../lib/a11y.ts';
 import { formatINR, parseNumber } from '../lib/money.ts';
 import {
@@ -34,6 +35,7 @@ export default function TransactionForm({ config, txn, customers, keepDate, conf
   const formRef = useRef<HTMLFormElement>(null);
 
   const [form, setForm] = useState<FormState>(() => initialForm(config, txn, keepDate));
+  const [initialJson] = useState(() => JSON.stringify(form));
   const [submitted, setSubmitted] = useState(false);
   const [serverErrors, setServerErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export default function TransactionForm({ config, txn, customers, keepDate, conf
   const [confirmRate, setConfirmRate] = useState<null | { addAnother: boolean }>(null);
 
   const validation = useMemo(() => validateForm(form, config.today), [form, config.today]);
+  useUnsavedChangesWarning(!saving && JSON.stringify(form) !== initialJson);
   const errors: FormErrors = { ...(submitted && !validation.ok ? validation.errors : {}), ...serverErrors };
   const preview = previewOf(form);
   const shares = sharesStatus(form);
