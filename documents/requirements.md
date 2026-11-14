@@ -80,7 +80,7 @@ An Admin or User-W fills one short form per loan; the commission and every partn
 | Transaction date | Yes | Today (India time) | Can be changed to a past date. Future dates are not allowed. |
 | Customer name | Yes | Empty | Up to 100 characters. Suggests names already used before, to keep spelling consistent. |
 | Amount lent (₹) | Yes | Empty | More than ₹0, up to 2 decimal places. |
-| Commission rate (%) | Yes | 0.30% (set by admin) | More than 0% and less than 100%. |
+| Commission rate (%) | Yes | 0.30% (set by admin) | More than 0% and less than 100%. Above 2% asks “Are you sure?” before saving. |
 | Commission (₹) | Calculated | — | Amount lent × commission rate. Shown live, not typed. |
 | Partner shares (%) | Yes | Admin's default shares | One line per active partner, each with their ₹ earning beside their name. Must add up to 100%. |
 | Repaid status | Yes | Pending | Pending or Repaid. Can be switched later from the transaction list with one tap. |
@@ -150,6 +150,10 @@ The home screen is a dashboard for a chosen period, opening on the current month
 | Month by month | Total lent and commission per month, when the period covers more than one month. |
 
 **Transaction list for the period:** newest first, with search by customer name and a filter for Pending or Repaid. Deleted transactions never count in any figure.
+
+**Counting rule:** commission counts as earned on the transaction date, even while the loan is still Pending. Pending amounts are shown as their own figure.
+
+**Export:** the dashboard and the transaction list each have an **Export CSV** button for the selected period. The file opens in Excel and lists each transaction with its partner earnings.
 
 ## Users and access
 
@@ -289,12 +293,12 @@ Shares sit in their own tab so the owner admin can read and pivot partner earnin
 | Extra fields | Repaid status (Pending/Repaid) and Notes. |
 | Periods | Indian financial year, April to March. |
 | Currency | ₹ with Indian digit grouping. |
+| When commission counts | On the transaction date, even while Pending; Pending amounts shown separately. |
+| User-RO visibility | Everything, read only, including customer names and individual transactions. |
+| Rate typo check | Rates above 2% ask “Are you sure?” before saving. |
+| Export | CSV export of the selected period is in the first version. |
 
 **Open, with a proposed answer (tick when agreed):**
 
-- [ ] Does commission count as earned before the loan is repaid? Proposed: yes, by transaction date; Pending amounts are shown separately.
-- [ ] Can User-RO see customer names and individual transactions, or only totals? Proposed: they see everything, read only.
-- [ ] Should a commission rate above a set level (for example 2%) ask “Are you sure?” to catch typing mistakes? Proposed: yes, warn above 2%.
 - [ ] Should partners who log in see only their own earnings? Proposed: no, everyone sees all partners.
-- [ ] Is an export to Excel/CSV of the selected period needed? Proposed: later, not in the first version.
 - [ ] Should a customer's phone number be recorded, to tell apart customers with the same name? Proposed: not in the first version.

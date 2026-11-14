@@ -2,7 +2,7 @@
 
 A private CRUD app for a small group. It is a React + TypeScript + Vite app on GitHub Pages with Google sign-in, an Apps Script API and a Google Sheet as the database. Only emails on the allow-list can read or change data.
 
-The full setup steps are in the [setup guide](documents/CRUD%20App%20Setup%20Guide%20GitHub%20Pages%20+%20Google%20Sign-In%20+%20Google%20Sheets.md) (React specifics: section 6.6). The business requirements are in [documents/requirements.md](documents/requirements.md).
+The full setup steps are in the [setup guide](documents/CRUD%20App%20Setup%20Guide%20GitHub%20Pages%20+%20Google%20Sign-In%20+%20Google%20Sheets.md) (React specifics: section 6.6). The business requirements are in [documents/requirements.md](documents/requirements.md), the architecture in [documents/architecture.md](documents/architecture.md), and the build plan in [documents/development-plan.md](documents/development-plan.md).
 
 ## Layout
 
