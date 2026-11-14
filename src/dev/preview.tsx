@@ -9,6 +9,7 @@ import App from '../App.tsx';
 import { AuthContext, type AuthContextValue } from '../auth/authContext.ts';
 import { ToastProvider } from '../components/ToastProvider.tsx';
 import { config } from '../config.ts';
+import '@fontsource-variable/inter';
 import '../styles.css';
 import { installMockBackend } from './mockBackend.ts';
 

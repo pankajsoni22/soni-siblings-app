@@ -1,5 +1,7 @@
+import { ShieldCheck, UserPlus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '../api/ApiError.ts';
+import { initialsOf } from '../components/shell/navItems.ts';
 import { ROLE_LABELS, type AppUser, type Role } from '../api/types.ts';
 import { useApi } from '../api/useApi.ts';
 import { useQuery } from '../api/useQuery.ts';
@@ -85,10 +87,10 @@ export default function UsersPage() {
 
   return (
     <section>
-      <PageHeader title="Users" />
+      <PageHeader title="Users" subtitle="Only people on this list can sign in. Changes apply on their next action." />
 
-      <form className="card form add-user" onSubmit={e => void add(e)} noValidate>
-        <h2>Give someone access</h2>
+      <form className="card add-user" onSubmit={e => void add(e)} noValidate>
+        <div className="form-section-title"><h2>Give someone access</h2></div>
         <div className="form-grid">
           <FormField id="new-email" label="Google email" error={addError}>
             <input id="new-email" type="email" value={email} autoComplete="off" placeholder="name@gmail.com"
@@ -102,25 +104,30 @@ export default function UsersPage() {
           </FormField>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy}>Add</button>
+          <button type="submit" className="btn" disabled={busy}><UserPlus size={16} aria-hidden="true" /> Add person</button>
         </div>
       </form>
 
       {list.error && !list.data ? <div className="card"><ErrorState error={list.error} onRetry={list.reload} /></div>
         : !list.data ? <div className="card"><Loading /></div>
           : (
+            <div className="card">
+            <div className="card-head"><h2>People with access</h2><span className="card-sub">{list.data.filter(u => u.active).length} active</span></div>
             <ul className="user-list">
               {list.data.map(u => (
-                <li key={u.email} className={`card user-row${u.active ? '' : ' user-removed'}`}>
+                <li key={u.email} className={`user-row${u.active ? '' : ' user-removed'}`}>
                   <div className="user-who">
-                    <span className="user-email">{u.email}{isSelf(u) && <span className="muted"> (you)</span>}</span>
-                    <span className="muted user-note">
-                      {u.isOwner ? 'Owner · always an admin' : u.active ? ROLE_HELP[u.role] : 'No access'}
+                    <span className="avatar" aria-hidden="true">{initialsOf(u.email)}</span>
+                    <span className="user-text">
+                      <span className="user-email">{u.email}{isSelf(u) && <span className="muted"> (you)</span>}</span>
+                      <span className="user-note">
+                        {u.isOwner ? 'Owner · always an admin' : u.active ? ROLE_HELP[u.role] : 'No access'}
+                      </span>
                     </span>
                   </div>
                   <div className="user-actions">
                     {u.isOwner ? (
-                      <span className="badge badge-good">Admin</span>
+                      <span className="badge badge-good"><ShieldCheck size={13} aria-hidden="true" /> Admin</span>
                     ) : u.active ? (
                       <>
                         <label className="visually-hidden" htmlFor={`role-${u.email}`}>Role for {u.email}</label>
@@ -139,6 +146,7 @@ export default function UsersPage() {
                 </li>
               ))}
             </ul>
+            </div>
           )}
 
       {pending && (

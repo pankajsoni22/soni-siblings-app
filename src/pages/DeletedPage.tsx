@@ -1,5 +1,7 @@
+import { ArrowLeft, History, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { initialsOf } from '../components/shell/navItems.ts';
 import { ApiError } from '../api/ApiError.ts';
 import type { Transaction } from '../api/types.ts';
 import { useApi } from '../api/useApi.ts';
@@ -42,8 +44,8 @@ export default function DeletedPage() {
 
   return (
     <section>
-      <PageHeader title="Deleted entries">
-        <Link to="/transactions" className="btn btn-ghost">Back to transactions</Link>
+      <PageHeader title="Deleted entries" subtitle="Hidden from lists and totals. Restore puts an entry back.">
+        <Link to="/transactions" className="btn btn-ghost"><ArrowLeft size={16} aria-hidden="true" /> Transactions</Link>
       </PageHeader>
       <div className="toolbar">
         <PeriodPicker value={period} today={today} onChange={setPeriod} />
@@ -53,28 +55,31 @@ export default function DeletedPage() {
         : !list.data ? <div className="card"><Loading /></div>
           : rows.length === 0 ? <div className="card"><EmptyState title="No deleted entries in this period" /></div>
             : (
-              <ul className="txn-list">
-                {rows.map(t => (
-                  <li key={t.id} className="txn card">
-                    <div className="txn-main">
-                      <div className="txn-who">
-                        <span className="txn-customer">{t.customerName}</span>
-                        <span className="muted txn-date"><DateText value={t.txnDate} /> · <Money value={t.amount} /></span>
+              <div className="card">
+                <ul className="user-list">
+                  {rows.map(t => (
+                    <li key={t.id} className="user-row">
+                      <div className="user-who">
+                        <span className="recent-avatar" aria-hidden="true">{initialsOf(t.customerName)}</span>
+                        <span className="user-text">
+                          <span className="user-email">{t.customerName} · <Money value={t.amount} /></span>
+                          <span className="user-note">
+                            <DateText value={t.txnDate} /> · deleted by {t.deletedBy}, <DateText value={t.deletedAt} />
+                          </span>
+                        </span>
                       </div>
-                      <div className="txn-figures">
-                        <span className="muted">Deleted by {t.deletedBy}</span>
-                        <span className="muted"><DateText value={t.deletedAt} /></span>
+                      <div className="user-actions">
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setHistoryOf(t)}>
+                          <History size={15} aria-hidden="true" /> History
+                        </button>
+                        <button type="button" className="btn btn-sm" disabled={busyId === t.id} onClick={() => void restore(t)}>
+                          <Undo2 size={15} aria-hidden="true" /> Restore
+                        </button>
                       </div>
-                      <div className="txn-status">
-                        <button type="button" className="btn" disabled={busyId === t.id} onClick={() => void restore(t)}>Restore</button>
-                      </div>
-                    </div>
-                    <div className="txn-actions">
-                      <button type="button" className="link-button" onClick={() => setHistoryOf(t)}>History</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
       {historyOf && <HistoryDialog txn={historyOf} onClose={() => setHistoryOf(null)} />}

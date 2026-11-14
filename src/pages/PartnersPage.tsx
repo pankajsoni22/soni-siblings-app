@@ -1,5 +1,7 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../api/ApiError.ts';
+import { partnerColor } from '../lib/partnerColors.ts';
 import type { Partner } from '../api/types.ts';
 import { useApi } from '../api/useApi.ts';
 import { useQuery } from '../api/useQuery.ts';
@@ -13,7 +15,7 @@ export default function PartnersPage() {
   const list = useQuery('partners', api => api.listPartners());
   return (
     <section>
-      <PageHeader title="Partners" />
+      <PageHeader title="Partners" subtitle="Who shares the commission, and their default split." />
       {list.error && !list.data ? <div className="card"><ErrorState error={list.error} onRetry={list.reload} /></div>
         : !list.data ? <div className="card"><Loading /></div>
           // Remount with the saved list after each save, so the editor starts from the server's state.
@@ -59,8 +61,8 @@ function PartnersEditor({ partners, onSaved }: { partners: Partner[]; onSaved: (
   }
 
   return (
-    <div className="card form">
-      <p className="muted intro">
+    <div className="card" style={{ maxWidth: 820 }}>
+      <p className="intro">
         Default shares are where every new entry starts; each entry can still be adjusted. Active partners' shares must add up to
         100%. Partners who leave are deactivated, never deleted, so past entries and reports stay correct.
       </p>
@@ -69,14 +71,15 @@ function PartnersEditor({ partners, onSaved }: { partners: Partner[]; onSaved: (
         {rows.map((r, i) => (
           <li key={r.key} className={`partner-row${r.active ? '' : ' partner-inactive'}`}>
             <div className="partner-fields">
+              <span className="partner-swatch" style={{ background: partnerColor(i) }} aria-hidden="true" />
               <label className="visually-hidden" htmlFor={`pn-${r.key}`}>Name</label>
               <input id={`pn-${r.key}`} type="text" value={r.name} maxLength={60} placeholder="Partner name"
                 aria-invalid={Boolean(errors[r.key])} onChange={e => update(r.key, { name: e.target.value })} />
-              <span className="share-input">
+              <span className="input-affix share-input">
                 <label className="visually-hidden" htmlFor={`pp-${r.key}`}>Default share for {r.name || 'this partner'}</label>
                 <input id={`pp-${r.key}`} type="text" inputMode="decimal" value={r.pct} disabled={!r.active}
                   onChange={e => update(r.key, { pct: e.target.value })} />
-                <span aria-hidden="true">%</span>
+                <span className="affix affix-right" aria-hidden="true">%</span>
               </span>
             </div>
             <div className="partner-controls">
@@ -105,7 +108,7 @@ function PartnersEditor({ partners, onSaved }: { partners: Partner[]; onSaved: (
       {(errors._form ?? serverError) && <div className="banner banner-error" role="alert">{errors._form ?? serverError}</div>}
 
       <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={() => setRows(rs => [...rs, newRow()])}>Add partner</button>
+        <button type="button" className="btn btn-ghost" onClick={() => setRows(rs => [...rs, newRow()])}><Plus size={16} aria-hidden="true" /> Add partner</button>
         {dirty && <button type="button" className="btn btn-ghost" onClick={() => { setRows(rowsFrom(partners)); setSubmitted(false); }}>Undo changes</button>}
         <button type="button" className="btn" disabled={saving || !dirty || !totalOk} onClick={() => void save()}>
           {saving ? 'Saving…' : 'Save partners'}

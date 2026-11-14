@@ -1,3 +1,4 @@
+import { Check, ChevronRight, Clock3, Download, History, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/ApiError.ts';
@@ -18,6 +19,7 @@ import { useToast } from '../components/toastContext.ts';
 import { downloadCsv, partnerColumnsOf, transactionsToCsv } from '../lib/csv.ts';
 import { periodFor, periodKeyFrom, todayIst } from '../lib/fy.ts';
 import { formatINR, fromPaise, toPaise } from '../lib/money.ts';
+import { partnerColor } from '../lib/partnerColors.ts';
 import { formatPct } from '../lib/transactionForm.ts';
 
 type StatusFilter = 'ALL' | RepaidStatus;
@@ -123,22 +125,28 @@ export default function TransactionsPage() {
 
   return (
     <section>
-      <PageHeader title="Transactions">
-        {isAdmin && <Link to="/transactions/deleted" className="btn btn-ghost">Deleted entries</Link>}
-        {canWrite && <Link to="/transactions/new" className="btn">New entry</Link>}
+      <PageHeader title="Transactions" subtitle={period.detail}>
+        {isAdmin && <Link to="/transactions/deleted" className="btn btn-ghost"><Trash2 size={16} aria-hidden="true" /> Deleted</Link>}
+        <button type="button" className="btn btn-ghost" onClick={exportCsv} disabled={!filtered.length}>
+          <Download size={16} aria-hidden="true" /> Export
+        </button>
+        {canWrite && <Link to="/transactions/new" className="btn"><Plus size={17} aria-hidden="true" /> New entry</Link>}
       </PageHeader>
 
-      <div className="toolbar">
-        <PeriodPicker value={period} today={today} onChange={setPeriod} />
-        <label className="visually-hidden" htmlFor="txn-search">Search customer or notes</label>
-        <input id="txn-search" type="search" placeholder="Search customer" value={search} onChange={e => setSearch(e.target.value)} />
-        <label className="visually-hidden" htmlFor="txn-status">Status</label>
-        <select id="txn-status" value={status} onChange={e => setStatus(e.target.value as StatusFilter)}>
-          <option value="ALL">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="REPAID">Repaid</option>
-        </select>
-        <button type="button" className="btn btn-ghost" onClick={exportCsv} disabled={!filtered.length}>Export CSV</button>
+      <div className="filters">
+        <PeriodPicker value={period} today={today} onChange={setPeriod} showDetail={false} />
+        <span className="input-icon">
+          <Search size={16} aria-hidden="true" />
+          <label className="visually-hidden" htmlFor="txn-search">Search customer or notes</label>
+          <input id="txn-search" type="search" placeholder="Search customer or notes" value={search} onChange={e => setSearch(e.target.value)} />
+        </span>
+        <div className="segmented" role="group" aria-label="Status">
+          {(['ALL', 'PENDING', 'REPAID'] as const).map(s => (
+            <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}>
+              {s === 'ALL' ? 'All' : REPAID_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {list.error && !list.data ? (
@@ -147,9 +155,9 @@ export default function TransactionsPage() {
         <div className="card"><Loading /></div>
       ) : (
         <>
-          <p className="muted summary" aria-live="polite">
-            {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'} · lent <Money value={totals.lent} /> ·
-            commission <Money value={totals.commission} />
+          <p className="summary" aria-live="polite">
+            <b>{filtered.length.toLocaleString('en-IN')}</b> {filtered.length === 1 ? 'entry' : 'entries'} · lent <b><Money value={totals.lent} /></b> ·
+            commission <b><Money value={totals.commission} /></b>
             {list.loading && ' · refreshing…'}
           </p>
           {filtered.length === 0 ? (
@@ -159,13 +167,18 @@ export default function TransactionsPage() {
               </EmptyState>
             </div>
           ) : (
-            <ul className="txn-list">
-              {filtered.map(t => (
-                <TransactionRow key={t.id} txn={t} canWrite={canWrite} busy={busyId === t.id}
-                  onToggleRepaid={() => void toggleRepaid(t)} onDelete={() => setToDelete(t)}
-                  onHistory={isAdmin ? () => setHistoryOf(t) : undefined} />
-              ))}
-            </ul>
+            <div className="card txn-table">
+              <div className="txn-head" aria-hidden="true">
+                <span>Date</span><span>Customer</span><span>Amount</span><span>Rate</span><span>Commission</span><span>Status</span>
+              </div>
+              <ul className="txn-list">
+                {filtered.map(t => (
+                  <TransactionRow key={t.id} txn={t} canWrite={canWrite} busy={busyId === t.id}
+                    onToggleRepaid={() => void toggleRepaid(t)} onDelete={() => setToDelete(t)}
+                    onHistory={isAdmin ? () => setHistoryOf(t) : undefined} />
+                ))}
+              </ul>
+            </div>
           )}
         </>
       )}
@@ -198,36 +211,41 @@ function TransactionRow({ txn: t, canWrite, busy, onToggleRepaid, onDelete, onHi
   onToggleRepaid: () => void;
   onDelete: () => void;
 }) {
-  const statusClass = t.repaidStatus === 'REPAID' ? 'badge badge-good' : 'badge badge-pending';
+  const repaid = t.repaidStatus === 'REPAID';
+  const statusClass = repaid ? 'badge badge-good' : 'badge badge-pending';
+  const StatusIcon = repaid ? Check : Clock3;
   return (
-    <li className="txn card">
+    <li className="txn">
       <div className="txn-main">
+        <span className="txn-date"><DateText value={t.txnDate} /></span>
         <div className="txn-who">
           <span className="txn-customer">{t.customerName}</span>
-          <span className="muted txn-date"><DateText value={t.txnDate} /></span>
+          <span className="txn-date-mobile"><DateText value={t.txnDate} /></span>
         </div>
         <div className="txn-figures">
           <span className="txn-amount"><Money value={t.amount} /></span>
-          <span className="muted">at {formatPct(t.commissionRatePct)}% → <Money value={t.commission} /></span>
+          <span className="txn-rate">{formatPct(t.commissionRatePct)}%</span>
+          <span className="txn-comm"><span className="mobile-only">{formatPct(t.commissionRatePct)}% · </span><b>+<Money value={t.commission} /></b></span>
         </div>
         <div className="txn-status">
           {canWrite ? (
             <button type="button" className={statusClass} onClick={onToggleRepaid} disabled={busy}
-              aria-label={`${REPAID_LABELS[t.repaidStatus]}. Mark as ${t.repaidStatus === 'PENDING' ? 'repaid' : 'pending'}`}>
-              {REPAID_LABELS[t.repaidStatus]}
+              aria-label={`${REPAID_LABELS[t.repaidStatus]}. Mark as ${repaid ? 'pending' : 'repaid'}`}
+              title={`Mark as ${repaid ? 'pending' : 'repaid'}`}>
+              <StatusIcon size={13} aria-hidden="true" /> {REPAID_LABELS[t.repaidStatus]}
             </button>
           ) : (
-            <span className={statusClass}>{REPAID_LABELS[t.repaidStatus]}</span>
+            <span className={statusClass}><StatusIcon size={13} aria-hidden="true" /> {REPAID_LABELS[t.repaidStatus]}</span>
           )}
         </div>
       </div>
 
       <details className="txn-details">
-        <summary>Details</summary>
+        <summary><ChevronRight size={14} aria-hidden="true" /> Details</summary>
         <dl>
-          {t.shares.map(s => (
+          {t.shares.map((s, i) => (
             <div key={s.partnerId}>
-              <dt>{s.partnerName} <span className="muted">({s.sharePct}%)</span></dt>
+              <dt><span className="legend-dot" style={{ background: partnerColor(i) }} aria-hidden="true" />{s.partnerName} <span className="muted">({s.sharePct}%)</span></dt>
               <dd><Money value={s.earning} /></dd>
             </div>
           ))}
@@ -237,9 +255,9 @@ function TransactionRow({ txn: t, canWrite, busy, onToggleRepaid, onDelete, onHi
         </dl>
         {(canWrite || onHistory) && (
           <div className="txn-actions">
-            {onHistory && <button type="button" className="btn btn-ghost" onClick={onHistory}>History</button>}
-            {canWrite && <Link to={`/transactions/${t.id}/edit`} className="btn btn-ghost">Edit</Link>}
-            {canWrite && <button type="button" className="btn btn-ghost btn-danger-text" onClick={onDelete} disabled={busy}>Delete</button>}
+            {onHistory && <button type="button" className="btn btn-ghost btn-sm" onClick={onHistory}><History size={15} aria-hidden="true" /> History</button>}
+            {canWrite && <Link to={`/transactions/${t.id}/edit`} className="btn btn-ghost btn-sm"><Pencil size={15} aria-hidden="true" /> Edit</Link>}
+            {canWrite && <button type="button" className="btn btn-ghost btn-sm btn-danger-text" onClick={onDelete} disabled={busy}><Trash2 size={15} aria-hidden="true" /> Delete</button>}
           </div>
         )}
       </details>

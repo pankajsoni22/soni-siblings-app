@@ -3,11 +3,11 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import RequireRole from './auth/RequireRole.tsx';
 import { useAuth } from './auth/useAuth.ts';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
-import Nav from './components/Nav.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
-import { useFocusOnNavigate } from './components/useFocusOnNavigate.ts';
 import SessionExpiredDialog from './components/SessionExpiredDialog.tsx';
-import TopBar from './components/TopBar.tsx';
+import { MobileTop, TabBar } from './components/shell/MobileNav.tsx';
+import Sidebar from './components/shell/Sidebar.tsx';
+import { useFocusOnNavigate } from './components/useFocusOnNavigate.ts';
 import DashboardPage from './pages/DashboardPage.tsx';
 import NoAccessPage from './pages/NoAccessPage.tsx';
 import DeletedPage from './pages/DeletedPage.tsx';
@@ -30,10 +30,10 @@ export default function App() {
       content = <main id="main"><p className="muted center-text">Checking access…</p></main>;
       break;
     case 'signedOut':
-      content = <main id="main"><SignInPage /></main>;
+      content = <SignInPage />;
       break;
     case 'forbidden':
-      content = <main id="main"><NoAccessPage /></main>;
+      content = <NoAccessPage />;
       break;
     case 'ready':
     case 'expired':
@@ -45,7 +45,6 @@ export default function App() {
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
-      <TopBar />
       <OfflineBanner />
       <ErrorBoundary>{content}</ErrorBoundary>
       {status === 'expired' && <SessionExpiredDialog />}
@@ -57,11 +56,15 @@ function Shell() {
   const mainRef = useRef<HTMLElement>(null);
   useFocusOnNavigate(mainRef);
   return (
-    <div className="shell">
-      <Nav />
-      <main id="main" ref={mainRef} className="shell-main">
-        <AppRoutes />
-      </main>
+    <div className="app">
+      <Sidebar />
+      <div className="app-main">
+        <MobileTop />
+        <main id="main" ref={mainRef}>
+          <AppRoutes />
+        </main>
+      </div>
+      <TabBar />
     </div>
   );
 }

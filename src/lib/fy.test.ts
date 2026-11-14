@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatMonth, formatShortDate, fyLabel, fyQuarter, fyStartYear, lastDayOfMonth, periodFor, todayIst } from './fy.ts';
+import {
+  comparisonFor, formatMonth, formatShortDate, fyLabel, fyQuarter, fyStartYear, lastDayOfMonth, percentChange, periodFor, todayIst,
+  trailingMonths
+} from './fy.ts';
 
 const range = (key: Parameters<typeof periodFor>[0], today: string) => {
   const p = periodFor(key, today);
@@ -53,6 +56,49 @@ describe('periods', () => {
   it('custom ranges are returned as given, swapped if reversed', () => {
     expect(periodFor('custom', today, { from: '2026-01-05', to: '2026-02-10' })).toMatchObject({ from: '2026-01-05', to: '2026-02-10', detail: '5 Jan 2026 – 10 Feb 2026' });
     expect(periodFor('custom', today, { from: '2026-02-10', to: '2026-01-05' })).toMatchObject({ from: '2026-01-05', to: '2026-02-10' });
+  });
+});
+
+describe('comparison periods', () => {
+  const today = '2026-11-14';
+  const cmp = (key: Parameters<typeof periodFor>[0]) => {
+    const c = comparisonFor(periodFor(key, today), today);
+    return [c.from, c.to, c.label];
+  };
+
+  it('compares periods in progress to the same point of the previous one', () => {
+    expect(cmp('today')).toEqual(['2026-11-13', '2026-11-13', 'vs yesterday']);
+    expect(cmp('thisMonth')).toEqual(['2026-10-01', '2026-10-14', 'vs same point last month']);
+    expect(cmp('thisQuarter')).toEqual(['2026-07-01', '2026-08-14', 'vs same point last quarter']);
+    expect(cmp('thisFY')).toEqual(['2025-04-01', '2025-11-14', 'vs same point FY 2025-26']);
+    // a previous month shorter than the elapsed days is clipped to its end
+    const c = comparisonFor(periodFor('thisMonth', '2026-03-31'), '2026-03-31');
+    expect([c.from, c.to]).toEqual(['2026-02-01', '2026-02-28']);
+  });
+
+  it('compares finished periods to the whole previous one', () => {
+    expect(cmp('lastMonth')).toEqual(['2026-09-01', '2026-09-30', 'vs Sep 2026']);
+    expect(comparisonFor(periodFor('lastMonth', '2026-01-10'), '2026-01-10').label).toBe('vs Nov 2025');
+    expect(comparisonFor(periodFor('lastMonth', '2026-02-10'), '2026-02-10').label).toBe('vs Dec 2025');
+    expect(cmp('lastQuarter')).toEqual(['2026-04-01', '2026-06-30', 'vs Q1']);
+    expect(comparisonFor(periodFor('lastQuarter', '2026-05-01'), '2026-05-01').from).toBe('2025-10-01');
+    expect(cmp('lastFY')).toEqual(['2024-04-01', '2025-03-31', 'vs FY 2024-25']);
+  });
+
+  it('compares a custom range to the same number of days before it', () => {
+    const c = comparisonFor(periodFor('custom', today, { from: '2026-10-01', to: '2026-10-10' }), today);
+    expect([c.from, c.to, c.label]).toEqual(['2026-09-21', '2026-09-30', 'vs previous 10 days']);
+  });
+
+  it('gives trailing months for single-month periods', () => {
+    expect(trailingMonths('2026-11-14', 12)).toEqual({ from: '2025-12-01', to: '2026-11-14' });
+    expect(trailingMonths('2026-01-31', 3)).toEqual({ from: '2025-11-01', to: '2026-01-31' });
+  });
+
+  it('computes percentage change', () => {
+    expect(percentChange(110, 100)).toBeCloseTo(10);
+    expect(percentChange(50, 100)).toBeCloseTo(-50);
+    expect(percentChange(10, 0)).toBeNull();
   });
 });
 

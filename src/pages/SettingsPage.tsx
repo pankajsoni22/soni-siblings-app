@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const config = useQuery('config', api => api.getConfig());
   return (
     <section>
-      <PageHeader title="Settings" />
+      <PageHeader title="Settings" subtitle="Defaults used when recording new entries." />
       {config.error && !config.data ? <div className="card"><ErrorState error={config.error} onRetry={config.reload} /></div>
         : !config.data ? <div className="card"><Loading /></div>
           : <RateForm key={config.data.defaultCommissionRatePct} config={config.data} onSaved={config.reload} />}
@@ -56,7 +56,7 @@ function RateForm({ config, onSaved }: { config: AppConfig; onSaved: () => void 
   }
 
   return (
-    <form className="card form" onSubmit={e => void save(e)} noValidate>
+    <form className="card" style={{ maxWidth: 560 }} onSubmit={e => void save(e)} noValidate>
       <FormField id="default-rate" label="Default commission rate (%)" error={error}
         hint="New entries start with this rate; it can be changed on each entry. Existing entries keep their rate.">
         <input id="default-rate" type="text" inputMode="decimal" value={rate} autoComplete="off"
