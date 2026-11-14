@@ -324,8 +324,12 @@ flowchart TB
 
     subgraph core["Core"]
         moneym["Money.gs<br/>paise calculations"]
+        validm["Validation.gs<br/>input checks"]
         sheetm["Sheet.gs<br/>read tables, write rows,<br/>plain-text cells, lock, audit"]
+        configm["Config.gs<br/>roles, schema of every tab"]
     end
+
+    setupm["Setup.gs<br/>run once: tabs, owner, defaults"]
 
     sheet[("Google Sheet")]
 
@@ -338,6 +342,9 @@ flowchart TB
     txnm --> sheetm
     reportm --> moneym
     reportm --> sheetm
+    usersm & partnersm & txnm --> validm
+    sheetm --> configm
+    setupm --> sheetm
     sheetm --> sheet
 ```
 

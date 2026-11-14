@@ -1,16 +1,15 @@
 /**
- * Types shared with the Apps Script backend (apps-script/Code.gs).
- * Keep `Entities` in sync with ENTITIES there: same names, same fields.
- * Optional fields come back as `null` when empty; optional booleans come back as `false`.
+ * Types shared with the Apps Script backend (apps-script/*.gs).
+ * Keep in sync with TABS in apps-script/Config.gs and ACTIONS in apps-script/Router.gs.
  */
-export interface Entities {
-  Items: {
-    title: string;
-    status: 'Open' | 'Done';
-  };
-}
 
-export type EntityName = keyof Entities;
+export type Role = 'ADMIN' | 'USER_W' | 'USER_RO';
+
+export const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: 'Admin',
+  USER_W: 'User-W',
+  USER_RO: 'User-RO'
+};
 
 /** Columns the server sets on every record. The browser never writes these. */
 export interface SystemFields {
@@ -24,16 +23,23 @@ export interface SystemFields {
   deletedBy: string;
 }
 
-export type StoredRecord<E extends EntityName> = Entities[E] & SystemFields;
-
 /** The signed-in user, as verified by the backend. */
 export interface Me {
   email: string;
   name: string;
-  isAdmin: boolean;
+  role: Role;
+  isOwner: boolean;
 }
 
-export type Action = 'me' | 'list' | 'get' | 'create' | 'update' | 'delete' | 'restore';
+/** A row of the Users tab. The owner may appear without system fields if their row was removed by hand. */
+export interface AppUser extends Partial<SystemFields> {
+  email: string;
+  role: Role;
+  active: boolean;
+  isOwner: boolean;
+}
+
+export type Action = 'me' | 'listUsers' | 'saveUser' | 'removeUser';
 
 export type ApiErrorCode =
   | 'AUTH_REQUIRED'

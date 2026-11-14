@@ -1,0 +1,5 @@
+# Patterns are relative to rootDir (apps-script/). Push only the backend code and manifest;
+# never the tests.
+**/**
+!*.gs
+!appsscript.json

@@ -1,6 +1,6 @@
 import { config } from '../config.ts';
 import { ApiError } from './ApiError.ts';
-import type { Action, ApiResponse, Entities, EntityName, Me, StoredRecord } from './types.ts';
+import type { Action, ApiResponse, AppUser, Me, Role } from './types.ts';
 
 export interface Credentials {
   token: string;
@@ -21,7 +21,7 @@ const EXPIRY_MARGIN_MS = 60_000;
  * or rejects with an ApiError. In components, get an instance from the useApi() hook.
  *
  *   const api = useApi();
- *   const items = await api.list('Items');          // StoredRecord<'Items'>[]
+ *   const users = await api.listUsers();            // AppUser[]
  */
 export class ApiClient {
   readonly #credentials: Credentials | null;
@@ -36,35 +36,19 @@ export class ApiClient {
     return this.#call('me', {});
   }
 
-  list<E extends EntityName>(entity: E, options: { includeDeleted?: boolean } = {}): Promise<StoredRecord<E>[]> {
-    return this.#call('list', { entity, ...options });
+  /** Admin only. Owner first, then active users, then removed ones. */
+  listUsers(): Promise<AppUser[]> {
+    return this.#call('listUsers', {});
   }
 
-  get<E extends EntityName>(entity: E, id: string, options: { includeDeleted?: boolean } = {}): Promise<StoredRecord<E>> {
-    return this.#call('get', { entity, id, ...options });
+  /** Admin only. Adds a person, or changes their role and reactivates them. */
+  saveUser(email: string, role: Role): Promise<AppUser> {
+    return this.#call('saveUser', { email, role });
   }
 
-  create<E extends EntityName>(entity: E, data: Entities[E]): Promise<StoredRecord<E>> {
-    return this.#call('create', { entity, data });
-  }
-
-  /** Fails with CONFLICT if someone changed the record after `expectedUpdatedAt`. */
-  update<E extends EntityName>(
-    entity: E,
-    id: string,
-    data: Partial<Entities[E]>,
-    expectedUpdatedAt: string
-  ): Promise<StoredRecord<E>> {
-    return this.#call('update', { entity, id, data, expectedUpdatedAt });
-  }
-
-  /** Soft delete: the row stays in the Sheet with deleted = TRUE. */
-  delete(entity: EntityName, id: string): Promise<{ id: string }> {
-    return this.#call('delete', { entity, id });
-  }
-
-  restore<E extends EntityName>(entity: E, id: string): Promise<StoredRecord<E>> {
-    return this.#call('restore', { entity, id });
+  /** Admin only. Their access ends on their next request. The owner cannot be removed. */
+  removeUser(email: string): Promise<AppUser> {
+    return this.#call('removeUser', { email });
   }
 
   async #call<T>(action: Action, payload: object): Promise<T> {
