@@ -9,6 +9,7 @@ import { can } from '../auth/permissions.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import ConfirmDialog from '../components/ConfirmDialog.tsx';
 import DateText from '../components/DateText.tsx';
+import HistoryDialog from '../components/HistoryDialog.tsx';
 import Money from '../components/Money.tsx';
 import PageHeader from '../components/PageHeader.tsx';
 import PeriodPicker from '../components/PeriodPicker.tsx';
@@ -32,6 +33,8 @@ export default function TransactionsPage() {
   const toast = useToast();
   const { me } = useAuth();
   const canWrite = can(me?.role, 'saveTransaction');
+  const isAdmin = can(me?.role, 'getHistory');
+  const [historyOf, setHistoryOf] = useState<Transaction | null>(null);
 
   const [searchParams] = useSearchParams();
   const [today] = useState(todayIst);
@@ -121,6 +124,7 @@ export default function TransactionsPage() {
   return (
     <section>
       <PageHeader title="Transactions">
+        {isAdmin && <Link to="/transactions/deleted" className="btn btn-ghost">Deleted entries</Link>}
         {canWrite && <Link to="/transactions/new" className="btn">New entry</Link>}
       </PageHeader>
 
@@ -158,12 +162,15 @@ export default function TransactionsPage() {
             <ul className="txn-list">
               {filtered.map(t => (
                 <TransactionRow key={t.id} txn={t} canWrite={canWrite} busy={busyId === t.id}
-                  onToggleRepaid={() => void toggleRepaid(t)} onDelete={() => setToDelete(t)} />
+                  onToggleRepaid={() => void toggleRepaid(t)} onDelete={() => setToDelete(t)}
+                  onHistory={isAdmin ? () => setHistoryOf(t) : undefined} />
               ))}
             </ul>
           )}
         </>
       )}
+
+      {historyOf && <HistoryDialog txn={historyOf} onClose={() => setHistoryOf(null)} />}
 
       {toDelete && (
         <ConfirmDialog
@@ -182,9 +189,11 @@ export default function TransactionsPage() {
   );
 }
 
-function TransactionRow({ txn: t, canWrite, busy, onToggleRepaid, onDelete }: {
+function TransactionRow({ txn: t, canWrite, busy, onToggleRepaid, onDelete, onHistory }: {
   txn: Transaction;
   canWrite: boolean;
+  /** Admins only. */
+  onHistory?: () => void;
   busy: boolean;
   onToggleRepaid: () => void;
   onDelete: () => void;
@@ -226,10 +235,11 @@ function TransactionRow({ txn: t, canWrite, busy, onToggleRepaid, onDelete }: {
           <div><dt>Added by</dt><dd>{t.createdBy}, <DateText value={t.createdAt} /></dd></div>
           {t.updatedAt !== t.createdAt && <div><dt>Last changed by</dt><dd>{t.updatedBy}, <DateText value={t.updatedAt} /></dd></div>}
         </dl>
-        {canWrite && (
+        {(canWrite || onHistory) && (
           <div className="txn-actions">
-            <Link to={`/transactions/${t.id}/edit`} className="btn btn-ghost">Edit</Link>
-            <button type="button" className="btn btn-ghost btn-danger-text" onClick={onDelete} disabled={busy}>Delete</button>
+            {onHistory && <button type="button" className="btn btn-ghost" onClick={onHistory}>History</button>}
+            {canWrite && <Link to={`/transactions/${t.id}/edit`} className="btn btn-ghost">Edit</Link>}
+            {canWrite && <button type="button" className="btn btn-ghost btn-danger-text" onClick={onDelete} disabled={busy}>Delete</button>}
           </div>
         )}
       </details>

@@ -7,8 +7,11 @@ import SessionExpiredDialog from './components/SessionExpiredDialog.tsx';
 import TopBar from './components/TopBar.tsx';
 import DashboardPage from './pages/DashboardPage.tsx';
 import NoAccessPage from './pages/NoAccessPage.tsx';
-import Placeholder from './pages/Placeholder.tsx';
+import DeletedPage from './pages/DeletedPage.tsx';
+import PartnersPage from './pages/PartnersPage.tsx';
+import SettingsPage from './pages/SettingsPage.tsx';
 import SignInPage from './pages/SignInPage.tsx';
+import UsersPage from './pages/UsersPage.tsx';
 import TransactionFormPage from './pages/TransactionFormPage.tsx';
 import TransactionsPage from './pages/TransactionsPage.tsx';
 
@@ -63,21 +66,12 @@ function AppRoutes() {
       <Route path="/transactions/:id/edit" element={
         <RequireRole action="saveTransaction"><TransactionFormPage /></RequireRole>
       } />
-      <Route path="/partners" element={
-        <RequireRole action="listPartners">
-          <Placeholder title="Partners" phase={5}>Partners, default shares and the 100% check.</Placeholder>
-        </RequireRole>
+      <Route path="/transactions/deleted" element={
+        <RequireRole action="getHistory"><DeletedPage /></RequireRole>
       } />
-      <Route path="/users" element={
-        <RequireRole action="listUsers">
-          <Placeholder title="Users" phase={5}>Who can sign in, and their roles.</Placeholder>
-        </RequireRole>
-      } />
-      <Route path="/settings" element={
-        <RequireRole action="saveSettings">
-          <Placeholder title="Settings" phase={5}>The default commission rate.</Placeholder>
-        </RequireRole>
-      } />
+      <Route path="/partners" element={<RequireRole action="listPartners"><PartnersPage /></RequireRole>} />
+      <Route path="/users" element={<RequireRole action="listUsers"><UsersPage /></RequireRole>} />
+      <Route path="/settings" element={<RequireRole action="saveSettings"><SettingsPage /></RequireRole>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

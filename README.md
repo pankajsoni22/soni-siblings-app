@@ -35,7 +35,10 @@ src/
                                ConfirmDialog, Loading/Empty/Error states, Toast, SessionExpiredDialog
   lib/transactionForm.ts       the entry form's rules (defaults, live preview, validation), tested
   components/charts/           PartnerEarnings (meter list), MonthlyChart (columns + table view)
-  pages/                       Dashboard, Transactions, TransactionForm(Page), placeholders, SignIn, NoAccess
+  lib/partnersForm.ts          Partners screen rules (100% of active defaults, unique names), tested
+  lib/history.ts               audit entries → readable lines for the History dialog, tested
+  pages/                       Dashboard, Transactions, TransactionForm(Page), Deleted, Partners, Users,
+                               Settings, SignIn, NoAccess
   dev/                         preview.tsx + mockBackend.ts: the app with mock data (development only)
 preview.html                   development-only entry for the preview; not in the production build
 apps-script/                   the backend, pushed to Apps Script with clasp (not built or served by Pages)

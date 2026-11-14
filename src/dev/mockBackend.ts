@@ -3,7 +3,7 @@
  * viewed without Google sign-in or the Apps Script deployment. Used by preview.html, which is
  * not part of the production build. Figures come from the real money rules (lib/money.ts).
  */
-import type { AppConfig, Report, Share, Transaction } from '../api/types.ts';
+import type { AppConfig, AppUser, HistoryEntry, Partner, Report, Share, Transaction } from '../api/types.ts';
 import { commissionPaise, fromPaise, splitPaise, toPaise } from '../lib/money.ts';
 
 const partners = [
@@ -48,6 +48,28 @@ const txns: Transaction[] = (() => {
   return out;
 })();
 
+// A few deleted entries for the Deleted view.
+for (const t of txns.filter((_, i) => i % 17 === 5)) {
+  Object.assign(t, { deleted: true, deletedAt: `${t.txnDate}T11:30:00.000Z`, deletedBy: 'ravi@gmail.com' });
+}
+
+const system = (id: string) => ({
+  id, createdAt: '2026-04-01T04:00:00.000Z', createdBy: 'pankaj@gmail.com', updatedAt: '2026-04-01T04:00:00.000Z',
+  updatedBy: 'pankaj@gmail.com', deleted: false, deletedAt: '', deletedBy: ''
+});
+
+let allPartners: Partner[] = [
+  ...partners.map(p => ({ ...system(p.id), ...p, active: true })),
+  { ...system('p0'), name: 'Vikram (left in 2025)', defaultSharePct: 25, active: false, sortOrder: 3 }
+];
+
+const users: AppUser[] = [
+  { email: 'pankaj@gmail.com', role: 'ADMIN', active: true, isOwner: true },
+  { email: 'ravi@gmail.com', role: 'USER_W', active: true, isOwner: false },
+  { email: 'sunita@gmail.com', role: 'USER_RO', active: true, isOwner: false },
+  { email: 'old.accountant@gmail.com', role: 'USER_W', active: false, isOwner: false }
+];
+
 function inRange(t: Transaction, from: string, to: string) {
   return !t.deleted && t.txnDate >= from && t.txnDate <= to;
 }
@@ -90,7 +112,43 @@ function handle(action: string, p: Payload): unknown {
   switch (action) {
     case 'me': return { email: 'pankaj@gmail.com', name: 'Pankaj', role: 'ADMIN', isOwner: true };
     case 'getConfig': return config;
-    case 'listTransactions': return txns.filter(t => inRange(t, str(p, 'from'), str(p, 'to'))).sort((a, b) => b.txnDate.localeCompare(a.txnDate));
+    case 'listTransactions': {
+      const withDeleted = p.includeDeleted === true;
+      return txns
+        .filter(t => (withDeleted || !t.deleted) && t.txnDate >= str(p, 'from') && t.txnDate <= str(p, 'to'))
+        .sort((a, b) => b.txnDate.localeCompare(a.txnDate));
+    }
+    case 'listPartners': return allPartners;
+    case 'savePartners': {
+      const input = p.partners as { id?: string; name: string; defaultSharePct: number; active: boolean }[];
+      allPartners = input.map((x, i) => ({ ...system(x.id ?? `p${Date.now()}${i}`), name: x.name, defaultSharePct: x.defaultSharePct, active: x.active, sortOrder: i }));
+      return allPartners;
+    }
+    case 'saveSettings': config.defaultCommissionRatePct = Number(p.defaultCommissionRatePct); return config;
+    case 'listUsers': return users;
+    case 'saveUser': {
+      const email = str(p, 'email');
+      const role = p.role as AppUser['role'];
+      const existing = users.find(u => u.email === email);
+      if (existing) Object.assign(existing, { role, active: true });
+      else users.push({ email, role, active: true, isOwner: false });
+      return users.find(u => u.email === email);
+    }
+    case 'removeUser': {
+      const u = users.find(x => x.email === str(p, 'email'));
+      if (u) u.active = false;
+      return u;
+    }
+    case 'getHistory': {
+      const t = txns.find(x => x.id === str(p, 'id'));
+      if (!t) return [];
+      const out: HistoryEntry[] = [
+        { timestamp: t.createdAt, email: t.createdBy, action: 'create', changes: { new: { ...t, shares: t.shares } } }
+      ];
+      if (t.notes) out.unshift({ timestamp: t.createdAt.replace(':15:', ':45:'), email: 'pankaj@gmail.com', action: 'update', changes: { notes: { old: null, new: t.notes }, amount: { old: t.amount - 50000, new: t.amount } } });
+      if (t.deleted) out.unshift({ timestamp: t.deletedAt, email: t.deletedBy, action: 'delete', changes: {} });
+      return out;
+    }
     case 'getTransaction': return txns.find(t => t.id === str(p, 'id'));
     case 'report': return report(str(p, 'from'), str(p, 'to'));
     case 'setRepaid': {
