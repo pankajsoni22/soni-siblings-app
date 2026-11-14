@@ -10,3 +10,8 @@ Thumbs.db
 .clasprc.json
 *.log
 .claude/settings.local.json
+
+# Business data: customer names and amounts. Never commit (the repo is public).
+data/
+# One-off import of historical entries (contains business data); pushed to Apps Script only.
+apps-script/ZImport*.gs

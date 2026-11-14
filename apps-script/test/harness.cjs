@@ -66,12 +66,13 @@ function makeEnv({ apostrophe = 'swallow', maxRows = 5, props = {} } = {}) {
   };
   const propStore = new Map(Object.entries({ GOOGLE_CLIENT_ID: CLIENT_ID, OWNER_EMAIL: OWNER, ...props }));
   const cache = new Map();
+  const logs = [];
   let fetches = 0;
 
   const ctx = {
-    console: { log: () => {}, error: () => {} },
+    console: { log: (...a) => logs.push(a.join(' ')), error: (...a) => logs.push(a.join(' ')) },
     SpreadsheetApp: { getActive: () => ss },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: k => propStore.get(k) ?? null }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => propStore.get(k) ?? null, setProperty: (k, v) => { propStore.set(k, String(v)); } }) },
     CacheService: { getScriptCache: () => ({ get: k => cache.get(k) ?? null, put: (k, v) => cache.set(k, v) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     Utilities: {
@@ -119,6 +120,8 @@ function makeEnv({ apostrophe = 'swallow', maxRows = 5, props = {} } = {}) {
     call: (token, action, payload) =>
       JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ action, token, payload }) } }).text),
     rawPost: body => JSON.parse(ctx.doPost(body).text),
+    /** What the backend wrote with console.log / console.error. */
+    logs,
     tab: name => {
       const s = sheets.get(name);
       return s ? s.getDataRange().getValues() : null;
