@@ -24,6 +24,7 @@ const ACTIONS = {
   me:                 ['ADMIN', 'USER_W', 'USER_RO'],
   getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
   listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
+  getTransaction:     ['ADMIN', 'USER_W', 'USER_RO'],
   report:             ['ADMIN', 'USER_W', 'USER_RO'],
   saveTransaction:    ['ADMIN', 'USER_W'],
   setRepaid:          ['ADMIN', 'USER_W'],
@@ -71,6 +72,7 @@ function dispatch_(action, payload, user) {
     case 'me':                 return user;
     case 'getConfig':          return getConfig_();
     case 'listTransactions':   return listTransactions_(payload, user);
+    case 'getTransaction':     return getTransaction_(payload);
     case 'report':             return report_(payload);
     case 'saveTransaction':    return withLock_(() => saveTransaction_(payload, user));
     case 'setRepaid':          return withLock_(() => setRepaid_(payload, user));

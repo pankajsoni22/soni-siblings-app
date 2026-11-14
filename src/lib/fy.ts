@@ -123,6 +123,12 @@ export function periodFor(key: PeriodKey, today: string, custom?: { from: string
   return { key, label, ...range };
 }
 
+/** A preset period key from a URL parameter, or the fallback (custom ranges can't come from the URL). */
+export function periodKeyFrom(value: string | null, fallback: PeriodKey): PeriodKey {
+  const found = PERIOD_OPTIONS.find(o => o.key === value && o.key !== 'custom');
+  return found ? found.key : fallback;
+}
+
 /** "14 Nov 2026" from "2026-11-14". */
 export function formatShortDate(date: string): string {
   const { y, m, d } = parts(date);

@@ -225,6 +225,27 @@ describe('editing transactions', () => {
     assert.match(err(save(WRITER, { transaction: txn(), shares: shares(40, 30, 30) }), 'VALIDATION').message, /inactive/);
   });
 
+  test('getTransaction returns one entry with its shares, for every role; deleted ones are not found', () => {
+    const { env, shares, txn, save } = business();
+    const t = ok(save(WRITER, { transaction: txn(), shares: shares(40, 30, 30) }));
+    const got = ok(env.call(tok(READER), 'getTransaction', { id: t.id }));
+    assert.equal(got.updatedAt, t.updatedAt);
+    assert.deepEqual(got.shares.map(s => s.earning), [600, 450, 450]);
+    ok(env.call(tok(WRITER), 'deleteTransaction', { id: t.id }));
+    err(env.call(tok(READER), 'getTransaction', { id: t.id }), 'NOT_FOUND');
+    err(env.call(tok(READER), 'getTransaction', {}), 'VALIDATION');
+  });
+
+  test('getConfig lists the order of all partners, inactive ones included', () => {
+    const { env, A, B, C } = business();
+    ok(env.call(tok(OWNER), 'savePartners', { partners: [
+      { id: C.id, name: C.name, defaultSharePct: 30, active: false }, { id: A.id, name: A.name, defaultSharePct: 50 },
+      { id: B.id, name: B.name, defaultSharePct: 50 }] }));
+    const cfg = ok(env.call(tok(WRITER), 'getConfig'));
+    assert.deepEqual(cfg.partnerOrder, [C.id, A.id, B.id]);
+    assert.deepEqual(cfg.partners.map(p => p.id), [A.id, B.id]);
+  });
+
   test('mark repaid and back, audited', () => {
     const { env, shares, txn, save } = business();
     const t = ok(save(WRITER, { transaction: txn(), shares: shares(40, 30, 30) }));

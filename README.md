@@ -33,7 +33,11 @@ src/
   lib/csv.ts                   CSV export that opens cleanly in Excel
   components/                  Nav, TopBar, PageHeader, Money, DateText, PeriodPicker, FormField,
                                ConfirmDialog, Loading/Empty/Error states, Toast, SessionExpiredDialog
-  pages/                       Dashboard, placeholders for later phases, SignIn, NoAccess
+  lib/transactionForm.ts       the entry form's rules (defaults, live preview, validation), tested
+  components/charts/           PartnerEarnings (meter list), MonthlyChart (columns + table view)
+  pages/                       Dashboard, Transactions, TransactionForm(Page), placeholders, SignIn, NoAccess
+  dev/                         preview.tsx + mockBackend.ts: the app with mock data (development only)
+preview.html                   development-only entry for the preview; not in the production build
 apps-script/                   the backend, pushed to Apps Script with clasp (not built or served by Pages)
   Config.gs                    roles and the schema of every Sheet tab
   Router.gs                    doPost/doGet, permission table (which role may call which action)
@@ -80,6 +84,8 @@ npm run push:backend   # pushes apps-script/ to the Apps Script project
 `test:backend` covers sign-in, roles and the permission table, users, partners, settings, saving and editing transactions (recalculation, conflicts, inactive partners), delete/undo/restore, history, listing, reports, the shared money cases, and how text and dates are stored. It only checks the logic; it does not replace the security checklist against the real deployment.
 
 Port 8000 matches the `http://localhost:8000` origin registered on the OAuth client. Local dev talks to the deployed `/exec` API.
+
+To look at the screens without signing in or a backend, open **http://localhost:8000/soni-siblings-app/preview.html** while `npm run dev` runs. It is the real app, signed in as a fake admin, with about six months of mock entries (`src/dev/mockBackend.ts`). Add `#/?period=thisFY` to open the dashboard on a given period (`today`, `thisMonth`, `lastMonth`, `thisQuarter`, `lastQuarter`, `thisFY`, `lastFY`); the same works on `#/transactions?period=…`.
 
 TypeScript is pinned to 6.0.x because typescript-eslint does not support TypeScript 7 yet.
 

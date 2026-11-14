@@ -68,11 +68,20 @@ function updateRecord_(table, row, fields, actor, opts) {
   const changes = diff_(row.record, fields);
   if (!Object.keys(changes).length && !opts.force) return row.record;
   const rec = Object.assign({}, row.record, fields);
-  if (table.def.system) Object.assign(rec, { updatedAt: new Date().toISOString(), updatedBy: actor.email });
+  if (table.def.system) Object.assign(rec, { updatedAt: nextTimestamp_(row.record.updatedAt), updatedBy: actor.email });
   writeCells_(table.sheet, row.rowNum, toRow_(table.headers, rec, row.raw));
   if (opts.audit !== false) audit_(actor, opts.action || 'update', table.name, recordKey_(table.def, rec), changes);
   row.record = rec;
   return rec;
+}
+
+/**
+ * Now, but always at least 1 ms after `previous`. updatedAt must change on every write, even two
+ * writes within one millisecond, or the conflict check (expectedUpdatedAt) could miss an edit.
+ */
+function nextTimestamp_(previous) {
+  const prev = Date.parse(previous);
+  return new Date(isNaN(prev) ? Date.now() : Math.max(Date.now(), prev + 1)).toISOString();
 }
 
 /** Soft delete: the row stays, marked with who deleted it and when. Bumps updatedAt. */

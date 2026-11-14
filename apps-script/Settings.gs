@@ -9,13 +9,18 @@ function readSettings_() {
   return out;
 }
 
-/** What the transaction form needs: default rate, active partners with default shares, today. */
+/**
+ * What the transaction form needs: default rate, active partners with default shares, today,
+ * and the order of ALL partners (active or not), which decides who takes a leftover paisa.
+ */
 function getConfig_() {
   const s = readSettings_();
+  const all = listPartners_();
   return {
     defaultCommissionRatePct: Number(s.defaultCommissionRatePct),
     rateWarningAbovePct: RATE_WARNING_ABOVE_PCT,
-    partners: activePartners_().map(p => ({ id: p.id, name: p.name, defaultSharePct: p.defaultSharePct, sortOrder: p.sortOrder })),
+    partners: all.filter(p => p.active).map(p => ({ id: p.id, name: p.name, defaultSharePct: p.defaultSharePct, sortOrder: p.sortOrder })),
+    partnerOrder: all.map(p => p.id),
     today: todayIst_()
   };
 }

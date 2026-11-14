@@ -71,6 +71,8 @@ export interface AppConfig {
   rateWarningAbovePct: number;
   /** Active partners in partner order. */
   partners: Pick<Partner, 'id' | 'name' | 'defaultSharePct' | 'sortOrder'>[];
+  /** Ids of ALL partners (inactive too) in partner order; decides who takes a leftover paisa. */
+  partnerOrder: string[];
   /** Today in India time, from the server. */
   today: string;
 }
@@ -142,7 +144,7 @@ export interface Report {
 }
 
 export type Action =
-  | 'me' | 'getConfig' | 'listTransactions' | 'report'
+  | 'me' | 'getConfig' | 'listTransactions' | 'getTransaction' | 'report'
   | 'saveTransaction' | 'setRepaid' | 'deleteTransaction' | 'restoreTransaction'
   | 'getHistory' | 'listPartners' | 'savePartners' | 'saveSettings'
   | 'listUsers' | 'saveUser' | 'removeUser';

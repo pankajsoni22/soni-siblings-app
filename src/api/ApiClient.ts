@@ -53,6 +53,11 @@ export class ApiClient {
     return this.#call('listTransactions', { from, to, ...options });
   }
 
+  /** One transaction with its shares (deleted ones are NOT_FOUND). */
+  getTransaction(id: string): Promise<Transaction> {
+    return this.#call('getTransaction', { id });
+  }
+
   /** Creates a transaction. The server calculates commission and earnings. */
   createTransaction(transaction: TransactionInput, shares: ShareInput[]): Promise<Transaction> {
     return this.#call('saveTransaction', { transaction, shares });

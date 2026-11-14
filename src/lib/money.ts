@@ -69,6 +69,21 @@ export function formatINR(rupees: number): string {
   return inr.format(rupees);
 }
 
+const inrCompact = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', notation: 'compact', maximumFractionDigits: 1 });
+
+/** ₹1.5L, ₹2.3Cr: for chart axes, where full figures don't fit. */
+export function formatINRCompact(rupees: number): string {
+  return inrCompact.format(rupees);
+}
+
+/** A round number at or above v for a chart axis: 1, 2, 2.5 or 5 × a power of ten. */
+export function niceCeil(v: number): number {
+  if (v <= 0) return 0;
+  const p = 10 ** Math.floor(Math.log10(v));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+
 /**
  * Reads what a user typed in an amount or percentage box: allows ₹, commas and spaces
  * ("5,00,000"). Returns null for anything that is not a plain non-negative number.

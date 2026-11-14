@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import calc from '../../shared/calc-cases.json';
 import {
-  commissionPaise, equalSharesPct, formatINR, hasMaxDecimals, parseNumber, previewSplit,
+  commissionPaise, equalSharesPct, formatINR, formatINRCompact, hasMaxDecimals, niceCeil, parseNumber, previewSplit,
   sharesTotalPct, splitPaise, toPaise
 } from './money.ts';
 
@@ -45,6 +45,16 @@ describe('helpers', () => {
     expect(formatINR(125000)).toBe('₹1,25,000.00');
     expect(formatINR(1500)).toBe('₹1,500.00');
     expect(formatINR(0.5)).toBe('₹0.50');
+  });
+
+  it('formats compact amounts in lakh and crore for chart axes', () => {
+    expect(formatINRCompact(150000)).toBe('₹1.5L');
+    expect(formatINRCompact(25000000)).toBe('₹2.5Cr');
+    expect(formatINRCompact(1500)).toBe('₹1.5K');
+  });
+
+  it('rounds axis maxima to clean numbers', () => {
+    expect([0, 7, 13, 21, 240, 1800, 2350].map(niceCeil)).toEqual([0, 10, 20, 25, 250, 2000, 2500]);
   });
 
   it('reads typed numbers, tolerating ₹, commas and spaces', () => {

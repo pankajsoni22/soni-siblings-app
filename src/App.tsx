@@ -9,6 +9,8 @@ import DashboardPage from './pages/DashboardPage.tsx';
 import NoAccessPage from './pages/NoAccessPage.tsx';
 import Placeholder from './pages/Placeholder.tsx';
 import SignInPage from './pages/SignInPage.tsx';
+import TransactionFormPage from './pages/TransactionFormPage.tsx';
+import TransactionsPage from './pages/TransactionsPage.tsx';
 
 export default function App() {
   const { status } = useAuth();
@@ -54,18 +56,12 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DashboardPage />} />
-      <Route path="/transactions" element={
-        <Placeholder title="Transactions" phase={4}>Search, filter by status, mark repaid, edit, delete with undo, and export CSV.</Placeholder>
-      } />
+      <Route path="/transactions" element={<TransactionsPage />} />
       <Route path="/transactions/new" element={
-        <RequireRole action="saveTransaction">
-          <Placeholder title="New entry" phase={4}>The form with live commission and partner earnings.</Placeholder>
-        </RequireRole>
+        <RequireRole action="saveTransaction"><TransactionFormPage /></RequireRole>
       } />
       <Route path="/transactions/:id/edit" element={
-        <RequireRole action="saveTransaction">
-          <Placeholder title="Edit entry" phase={4}>The same form, pre-filled.</Placeholder>
-        </RequireRole>
+        <RequireRole action="saveTransaction"><TransactionFormPage /></RequireRole>
       } />
       <Route path="/partners" element={
         <RequireRole action="listPartners">

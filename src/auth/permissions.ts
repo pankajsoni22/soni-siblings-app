@@ -9,6 +9,7 @@ export const PERMISSIONS: Record<Action, readonly Role[]> = {
   me:                 ['ADMIN', 'USER_W', 'USER_RO'],
   getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
   listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
+  getTransaction:     ['ADMIN', 'USER_W', 'USER_RO'],
   report:             ['ADMIN', 'USER_W', 'USER_RO'],
   saveTransaction:    ['ADMIN', 'USER_W'],
   setRepaid:          ['ADMIN', 'USER_W'],

@@ -65,6 +65,11 @@ function saveTransaction_(p, actor) {
   return withShares_(rec, newShares, order);
 }
 
+/** One transaction with its shares, for the edit form. Deleted ones are NOT_FOUND. Payload: { id }. */
+function getTransaction_(p) {
+  return withSharesFromSheet_(findTxnRow_(readTable_('Transactions'), p.id, false).record);
+}
+
 /** Payload: { id, repaidStatus: 'PENDING' | 'REPAID' }. */
 function setRepaid_(p, actor) {
   const status = checkField_('repaidStatus', TABS.Transactions.fields.repaidStatus, p.repaidStatus);

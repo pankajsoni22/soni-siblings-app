@@ -234,6 +234,20 @@ describe('sheet storage', () => {
     }
   }
 
+  test('updatedAt strictly increases, even for writes within the same millisecond', () => {
+    const env = notesEnv({ runSetup: true });
+    const stamps = JSON.parse(env.run(`
+      globalThis.actor = { email: 'a@gmail.com' };
+      { const t = readTable_('Notes'); insertRecord_(t, { title: 'x', day: null }, actor); }
+      const out = [];
+      for (let i = 0; i < 25; i++) {
+        const t = readTable_('Notes');
+        out.push(updateRecord_(t, t.rows[0], { title: 'x' + i }, actor).updatedAt);
+      }
+      JSON.stringify(out);`));
+    for (let i = 1; i < stamps.length; i++) assert.ok(stamps[i] > stamps[i - 1], `${stamps[i]} after ${stamps[i - 1]}`);
+  });
+
   test('an update with no changes writes nothing and logs nothing', () => {
     const env = notesEnv({ runSetup: true });
     env.run(`globalThis.actor = { email: 'a@gmail.com' }; { const t = readTable_('Notes'); insertRecord_(t, { title: 'x', day: null }, actor); }`);
