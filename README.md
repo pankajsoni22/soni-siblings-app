@@ -12,22 +12,28 @@ vite.config.ts                 base: '/soni-siblings-app/' (must match the repo 
 tsconfig*.json                 strict TypeScript; app (src/) and node (vite.config.ts) projects
 eslint.config.js               typescript-eslint (type-checked), React Hooks, React Refresh
 .env                           VITE_APP_NAME, VITE_GOOGLE_CLIENT_ID, VITE_API_URL (all public)
-.github/workflows/deploy.yml   lint, typecheck, build and publish dist/ on every push to main
+.github/workflows/deploy.yml   lint, unit + backend tests, typecheck, build, publish dist/ on push to main
 src/
   main.tsx                     providers + HashRouter
-  App.tsx                      picks the screen from the auth status; routes
+  App.tsx                      picks the screen from the auth status; app shell and routes
   config.ts                    reads the VITE_ values (typed in vite-env.d.ts)
   styles.css
-  api/types.ts                 roles, user and response types (mirror of TABS/ACTIONS in apps-script)
-  api/ApiClient.ts             typed client: me, listUsers, saveUser, removeUser
+  api/types.ts                 every API type (mirror of TABS/ACTIONS in apps-script)
+  api/ApiClient.ts             typed client, one method per backend action
   api/ApiError.ts              error class with a typed `code`
   api/useApi.ts                useApi(): ApiClient bound to the current session
+  api/useQuery.ts              useQuery(key, load): load data, ignore stale answers, reload
   auth/AuthProvider.tsx        sign-in, token in memory, allow-list check via `me`, expiry
   auth/authContext.ts          AuthStatus, Session and context types; useAuth.ts reads it
-  auth/gsi.ts                  Google Identity Services helpers
-  auth/SignInButton.tsx
-  components/                  TopBar, ToastProvider, SessionExpiredDialog (RecordTable, RecordForm, ... later)
-  pages/                       SignIn, NoAccess, Home; one folder per entity from the spec
+  auth/permissions.ts          can(role, action): copy of the server's permission table, for the UI
+  auth/RequireRole.tsx         route guard by action
+  auth/gsi.ts, SignInButton.tsx
+  lib/money.ts                 paise arithmetic (mirror of Money.gs), ₹ formatting, number input
+  lib/fy.ts                    Indian financial-year periods, quarters, date labels
+  lib/csv.ts                   CSV export that opens cleanly in Excel
+  components/                  Nav, TopBar, PageHeader, Money, DateText, PeriodPicker, FormField,
+                               ConfirmDialog, Loading/Empty/Error states, Toast, SessionExpiredDialog
+  pages/                       Dashboard, placeholders for later phases, SignIn, NoAccess
 apps-script/                   the backend, pushed to Apps Script with clasp (not built or served by Pages)
   Config.gs                    roles and the schema of every Sheet tab
   Router.gs                    doPost/doGet, permission table (which role may call which action)
@@ -65,6 +71,7 @@ npm run dev        # http://localhost:8000/soni-siblings-app/
 npm run lint       # ESLint
 npm run typecheck  # tsc
 npm run build      # typecheck + production build into dist/
+npm test           # frontend unit tests (Vitest)
 npm run test:backend   # runs apps-script/*.gs against a mocked Sheet
 npm run status:backend # lists the files clasp would push
 npm run push:backend   # pushes apps-script/ to the Apps Script project
@@ -80,8 +87,12 @@ Calling the API from a component:
 
 ```tsx
 const api = useApi();
-const users = await api.listUsers();                       // AppUser[]
-await api.saveUser('someone@gmail.com', 'USER_W');
+// in a component: loads on mount and whenever the period changes
+const { data, error, loading, reload } = useQuery(`report:${from}:${to}`, api => api.report(from, to));
+
+// in an event handler
+const api = useApi();
+const saved = await api.createTransaction(input, shares);   // server recalculates commission and earnings
 ```
 
 ## Release

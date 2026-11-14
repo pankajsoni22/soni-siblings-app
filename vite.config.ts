@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -14,5 +14,10 @@ export default defineConfig({
   preview: {
     port: 8000,
     strictPort: true
+  },
+  test: {
+    // Frontend unit tests only; the backend has its own runner (npm run test:backend).
+    include: ['src/**/*.test.ts'],
+    environment: 'node'
   }
 });

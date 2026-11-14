@@ -1,6 +1,9 @@
 import { config } from '../config.ts';
 import { ApiError } from './ApiError.ts';
-import type { Action, ApiResponse, AppUser, Me, Role } from './types.ts';
+import type {
+  Action, ApiResponse, AppConfig, AppUser, DeleteResult, HistoryEntry, Me, Partner, PartnerInput,
+  RepaidStatus, Report, Role, ShareInput, Transaction, TransactionInput
+} from './types.ts';
 
 export interface Credentials {
   token: string;
@@ -21,7 +24,9 @@ const EXPIRY_MARGIN_MS = 60_000;
  * or rejects with an ApiError. In components, get an instance from the useApi() hook.
  *
  *   const api = useApi();
- *   const users = await api.listUsers();            // AppUser[]
+ *   const txns = await api.listTransactions('2026-04-01', '2026-06-30');
+ *
+ * Who may call what is in src/auth/permissions.ts (mirrors the server's table).
  */
 export class ApiClient {
   readonly #credentials: Credentials | null;
@@ -34,6 +39,70 @@ export class ApiClient {
 
   me(): Promise<Me> {
     return this.#call('me', {});
+  }
+
+  /** Default rate, active partners with default shares, and today's date (India time). */
+  getConfig(): Promise<AppConfig> {
+    return this.#call('getConfig', {});
+  }
+
+  // --- Transactions --------------------------------------------------------
+
+  /** Transactions dated from..to (inclusive), newest first. includeDeleted is admin only. */
+  listTransactions(from: string, to: string, options: { includeDeleted?: boolean } = {}): Promise<Transaction[]> {
+    return this.#call('listTransactions', { from, to, ...options });
+  }
+
+  /** Creates a transaction. The server calculates commission and earnings. */
+  createTransaction(transaction: TransactionInput, shares: ShareInput[]): Promise<Transaction> {
+    return this.#call('saveTransaction', { transaction, shares });
+  }
+
+  /** Updates a transaction. Fails with CONFLICT if someone saved it after `expectedUpdatedAt`. */
+  updateTransaction(id: string, expectedUpdatedAt: string, transaction: TransactionInput, shares: ShareInput[]): Promise<Transaction> {
+    return this.#call('saveTransaction', { id, expectedUpdatedAt, transaction, shares });
+  }
+
+  setRepaid(id: string, repaidStatus: RepaidStatus): Promise<Transaction> {
+    return this.#call('setRepaid', { id, repaidStatus });
+  }
+
+  /** Soft delete. */
+  deleteTransaction(id: string): Promise<DeleteResult> {
+    return this.#call('deleteTransaction', { id });
+  }
+
+  /** Admins any time; others only for their own delete, within the undo window. */
+  restoreTransaction(id: string): Promise<Transaction> {
+    return this.#call('restoreTransaction', { id });
+  }
+
+  /** Admin only. Newest first. */
+  getHistory(id: string): Promise<HistoryEntry[]> {
+    return this.#call('getHistory', { id });
+  }
+
+  // --- Reports -------------------------------------------------------------
+
+  report(from: string, to: string): Promise<Report> {
+    return this.#call('report', { from, to });
+  }
+
+  // --- Admin ---------------------------------------------------------------
+
+  /** Admin only. All partners, active and inactive, in partner order. */
+  listPartners(): Promise<Partner[]> {
+    return this.#call('listPartners', {});
+  }
+
+  /** Admin only. Saves the whole list; active default shares must total 100%. */
+  savePartners(partners: PartnerInput[]): Promise<Partner[]> {
+    return this.#call('savePartners', { partners });
+  }
+
+  /** Admin only. Returns the updated config. */
+  saveSettings(defaultCommissionRatePct: number): Promise<AppConfig> {
+    return this.#call('saveSettings', { defaultCommissionRatePct });
   }
 
   /** Admin only. Owner first, then active users, then removed ones. */

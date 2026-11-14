@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import { formatMonth, formatShortDate, fyLabel, fyQuarter, fyStartYear, lastDayOfMonth, periodFor, todayIst } from './fy.ts';
+
+const range = (key: Parameters<typeof periodFor>[0], today: string) => {
+  const p = periodFor(key, today);
+  return [p.from, p.to, p.detail];
+};
+
+describe('financial year', () => {
+  it('starts on 1 April', () => {
+    expect(fyStartYear('2026-03-31')).toBe(2025);
+    expect(fyStartYear('2026-04-01')).toBe(2026);
+    expect(fyLabel(2026)).toBe('FY 2026-27');
+    expect(fyLabel(2099)).toBe('FY 2099-00');
+  });
+
+  it('numbers quarters from April', () => {
+    expect(['2026-04-01', '2026-06-30', '2026-07-01', '2026-12-31', '2027-01-01', '2027-03-31'].map(fyQuarter))
+      .toEqual([1, 1, 2, 3, 4, 4]);
+  });
+
+  it('knows month lengths, leap years included', () => {
+    expect(lastDayOfMonth(2028, 2)).toBe(29);
+    expect(lastDayOfMonth(2026, 2)).toBe(28);
+    expect(lastDayOfMonth(2026, 4)).toBe(30);
+  });
+});
+
+describe('periods', () => {
+  const today = '2026-11-14';
+
+  it('today and months', () => {
+    expect(range('today', today)).toEqual(['2026-11-14', '2026-11-14', '14 Nov 2026']);
+    expect(range('thisMonth', today)).toEqual(['2026-11-01', '2026-11-30', 'Nov 2026']);
+    expect(range('lastMonth', today)).toEqual(['2026-10-01', '2026-10-31', 'Oct 2026']);
+    expect(range('lastMonth', '2027-01-10')).toEqual(['2026-12-01', '2026-12-31', 'Dec 2026']);
+    expect(range('thisMonth', '2028-02-05')[1]).toBe('2028-02-29');
+  });
+
+  it('quarters, including across the year boundary', () => {
+    expect(range('thisQuarter', today)).toEqual(['2026-10-01', '2026-12-31', 'Q3 FY 2026-27 (Oct–Dec 2026)']);
+    expect(range('lastQuarter', today)).toEqual(['2026-07-01', '2026-09-30', 'Q2 FY 2026-27 (Jul–Sep 2026)']);
+    expect(range('thisQuarter', '2027-02-01')).toEqual(['2027-01-01', '2027-03-31', 'Q4 FY 2026-27 (Jan–Mar 2027)']);
+    expect(range('lastQuarter', '2026-05-15')).toEqual(['2026-01-01', '2026-03-31', 'Q4 FY 2025-26 (Jan–Mar 2026)']);
+  });
+
+  it('financial years', () => {
+    expect(range('thisFY', today)).toEqual(['2026-04-01', '2027-03-31', 'FY 2026-27 (Apr 2026 – Mar 2027)']);
+    expect(range('lastFY', today)).toEqual(['2025-04-01', '2026-03-31', 'FY 2025-26 (Apr 2025 – Mar 2026)']);
+    expect(range('thisFY', '2027-03-31')[0]).toBe('2026-04-01');
+  });
+
+  it('custom ranges are returned as given, swapped if reversed', () => {
+    expect(periodFor('custom', today, { from: '2026-01-05', to: '2026-02-10' })).toMatchObject({ from: '2026-01-05', to: '2026-02-10', detail: '5 Jan 2026 – 10 Feb 2026' });
+    expect(periodFor('custom', today, { from: '2026-02-10', to: '2026-01-05' })).toMatchObject({ from: '2026-01-05', to: '2026-02-10' });
+  });
+});
+
+describe('dates', () => {
+  it('formats short dates and months', () => {
+    expect(formatShortDate('2026-11-04')).toBe('4 Nov 2026');
+    expect(formatMonth('2026-04')).toBe('Apr 2026');
+  });
+
+  it('uses India time for today', () => {
+    // 20:00 UTC on 14 Nov is 01:30 on 15 Nov in India
+    expect(todayIst(new Date('2026-11-14T20:00:00Z'))).toBe('2026-11-15');
+    expect(todayIst(new Date('2026-11-14T18:00:00Z'))).toBe('2026-11-14');
+  });
+});
