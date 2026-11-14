@@ -33,12 +33,18 @@ apps-script/                   the backend, pushed to Apps Script with clasp (no
   Router.gs                    doPost/doGet, permission table (which role may call which action)
   Auth.gs                      Google token check, owner and Users-tab lookup
   Users.gs                     list, add, change role, remove users
+  Partners.gs                  partners and default shares (whole list saved at once, 100% rule)
+  Settings.gs                  getConfig (rate, active partners, today) and saveSettings
+  Transactions.gs              save (server recalculates), repaid, delete, undo/restore, history, list
+  Reports.gs                   totals, pending, earnings by partner, month by month
+  Money.gs                     paise arithmetic: commission and partner split
   Validation.gs                input checks
   Sheet.gs                     the only file that reads/writes the Sheet; plain-text cells, audit log
   Setup.gs                     setup(): creates tabs, adds the owner, default settings
   appsscript.json              manifest with the two allowed scopes
   test/                        backend tests against mocked Apps Script services (node --test)
 scripts/clasp-config.mjs       writes .clasp.json from SCRIPT_ID in .env
+shared/calc-cases.json         money test cases shared by the backend and frontend tests
 ```
 
 ## Configure
@@ -64,7 +70,7 @@ npm run status:backend # lists the files clasp would push
 npm run push:backend   # pushes apps-script/ to the Apps Script project
 ```
 
-`test:backend` covers sign-in, roles and the permission table, user management, setup, and how text and dates are stored. It only checks the logic; it does not replace the security checklist against the real deployment.
+`test:backend` covers sign-in, roles and the permission table, users, partners, settings, saving and editing transactions (recalculation, conflicts, inactive partners), delete/undo/restore, history, listing, reports, the shared money cases, and how text and dates are stored. It only checks the logic; it does not replace the security checklist against the real deployment.
 
 Port 8000 matches the `http://localhost:8000` origin registered on the OAuth client. Local dev talks to the deployed `/exec` API.
 

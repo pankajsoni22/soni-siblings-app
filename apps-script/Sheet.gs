@@ -34,8 +34,12 @@ function readTable_(name) {
   return table;
 }
 
-/** Appends a record. On `system` tabs the server sets id, timestamps and authorship. */
-function insertRecord_(table, fields, actor) {
+/**
+ * Appends a record. On `system` tabs the server sets id, timestamps and authorship.
+ * opts.audit = false skips the audit entry (the caller writes a combined one).
+ */
+function insertRecord_(table, fields, actor, opts) {
+  opts = opts || {};
   const now = new Date().toISOString();
   const rec = table.def.system
     ? Object.assign({}, fields, {
@@ -46,7 +50,7 @@ function insertRecord_(table, fields, actor) {
       })
     : Object.assign({}, fields);
   appendRow_(table.sheet, toRow_(table.headers, rec, []));
-  if (table.name !== AUDIT_TAB) audit_(actor, 'create', table.name, recordKey_(table.def, rec), { new: fields });
+  if (table.name !== AUDIT_TAB && opts.audit !== false) audit_(actor, 'create', table.name, recordKey_(table.def, rec), { new: fields });
   if (table.rows) table.rows.push({ rowNum: table.sheet.getLastRow(), raw: [], record: rec });
   return rec;
 }
@@ -54,16 +58,32 @@ function insertRecord_(table, fields, actor) {
 /**
  * Writes changed fields onto an existing row and logs old and new values.
  * Returns the record unchanged, without writing, when nothing differs.
+ *
+ * opts.action  audit action name (default 'update')
+ * opts.audit   false skips the audit entry (the caller writes a combined one)
+ * opts.force   write and bump updatedAt even when no field differs (e.g. only child rows changed)
  */
-function updateRecord_(table, row, fields, actor, action) {
+function updateRecord_(table, row, fields, actor, opts) {
+  opts = opts || {};
   const changes = diff_(row.record, fields);
-  if (!Object.keys(changes).length) return row.record;
+  if (!Object.keys(changes).length && !opts.force) return row.record;
   const rec = Object.assign({}, row.record, fields);
   if (table.def.system) Object.assign(rec, { updatedAt: new Date().toISOString(), updatedBy: actor.email });
   writeCells_(table.sheet, row.rowNum, toRow_(table.headers, rec, row.raw));
-  audit_(actor, action || 'update', table.name, recordKey_(table.def, rec), changes);
+  if (opts.audit !== false) audit_(actor, opts.action || 'update', table.name, recordKey_(table.def, rec), changes);
   row.record = rec;
   return rec;
+}
+
+/** Soft delete: the row stays, marked with who deleted it and when. Bumps updatedAt. */
+function softDelete_(table, row, actor, opts) {
+  const fields = { deleted: true, deletedAt: new Date().toISOString(), deletedBy: actor.email };
+  return updateRecord_(table, row, fields, actor, Object.assign({ action: 'delete' }, opts));
+}
+
+function restoreRecord_(table, row, actor, opts) {
+  const fields = { deleted: false, deletedAt: '', deletedBy: '' };
+  return updateRecord_(table, row, fields, actor, Object.assign({ action: 'restore' }, opts));
 }
 
 function audit_(actor, action, entity, recordId, changes) {

@@ -15,12 +15,27 @@ class ApiError extends Error {
   }
 }
 
-/** Which roles may call each action. Anything not listed here is refused. */
+/**
+ * Which roles may call each action. Anything not listed here is refused.
+ * restoreTransaction is further limited in its handler: User-W only for their own delete,
+ * within the undo window.
+ */
 const ACTIONS = {
-  me:         ['ADMIN', 'USER_W', 'USER_RO'],
-  listUsers:  ['ADMIN'],
-  saveUser:   ['ADMIN'],
-  removeUser: ['ADMIN']
+  me:                 ['ADMIN', 'USER_W', 'USER_RO'],
+  getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
+  listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
+  report:             ['ADMIN', 'USER_W', 'USER_RO'],
+  saveTransaction:    ['ADMIN', 'USER_W'],
+  setRepaid:          ['ADMIN', 'USER_W'],
+  deleteTransaction:  ['ADMIN', 'USER_W'],
+  restoreTransaction: ['ADMIN', 'USER_W'],
+  getHistory:         ['ADMIN'],
+  listPartners:       ['ADMIN'],
+  savePartners:       ['ADMIN'],
+  saveSettings:       ['ADMIN'],
+  listUsers:          ['ADMIN'],
+  saveUser:           ['ADMIN'],
+  removeUser:         ['ADMIN']
 };
 
 function doPost(e) {
@@ -53,10 +68,21 @@ function doGet() {
 
 function dispatch_(action, payload, user) {
   switch (action) {
-    case 'me':         return user;
-    case 'listUsers':  return listUsers_();
-    case 'saveUser':   return withLock_(() => saveUser_(payload, user));
-    case 'removeUser': return withLock_(() => removeUser_(payload, user));
+    case 'me':                 return user;
+    case 'getConfig':          return getConfig_();
+    case 'listTransactions':   return listTransactions_(payload, user);
+    case 'report':             return report_(payload);
+    case 'saveTransaction':    return withLock_(() => saveTransaction_(payload, user));
+    case 'setRepaid':          return withLock_(() => setRepaid_(payload, user));
+    case 'deleteTransaction':  return withLock_(() => deleteTransaction_(payload, user));
+    case 'restoreTransaction': return withLock_(() => restoreTransaction_(payload, user));
+    case 'getHistory':         return getHistory_(payload);
+    case 'listPartners':       return listPartners_();
+    case 'savePartners':       return withLock_(() => savePartners_(payload, user));
+    case 'saveSettings':       return withLock_(() => saveSettings_(payload, user));
+    case 'listUsers':          return listUsers_();
+    case 'saveUser':           return withLock_(() => saveUser_(payload, user));
+    case 'removeUser':         return withLock_(() => removeUser_(payload, user));
   }
   throw new Error('No handler for action ' + action);
 }

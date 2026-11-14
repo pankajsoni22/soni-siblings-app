@@ -51,11 +51,14 @@ function checkField_(name, f, v) {
     case 'enum':
       if (!f.values.includes(v)) throw bad('must be one of: ' + f.values.join(', '));
       return v;
-    case 'date':
-      if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(Date.parse(v))) {
-        throw bad('must be a date (YYYY-MM-DD)');
-      }
+    case 'date': {
+      // Date.parse('2026-02-30') quietly gives 2 March, so the date must read back unchanged.
+      const valid = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+        !isNaN(Date.parse(v + 'T00:00:00Z')) &&
+        new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
+      if (!valid) throw bad('must be a real date (YYYY-MM-DD)');
       return v;
+    }
     case 'email':
       if (typeof v !== 'string' || v.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) throw bad('must be an email address');
       return v.toLowerCase();
@@ -65,6 +68,27 @@ function checkField_(name, f, v) {
     default:
       throw new Error(`Field "${name}" has unknown type "${f.type}"`);
   }
+}
+
+/** A commission rate: more than 0 and less than 100, at most 4 decimals. */
+function checkRate_(v, name) {
+  const n = checkField_(name, { type: 'number', required: true }, v);
+  if (!(n > 0 && n < 100)) throw new ApiError('VALIDATION', `${name} must be more than 0 and less than 100`);
+  if (!hasMaxDecimals_(n, 4)) throw new ApiError('VALIDATION', `${name} must have at most 4 decimal places`);
+  return n;
+}
+
+/** A { from, to } date range, both YYYY-MM-DD, from on or before to. */
+function checkRange_(p) {
+  const from = checkField_('from', { type: 'date', required: true }, p.from);
+  const to = checkField_('to', { type: 'date', required: true }, p.to);
+  if (from > to) throw new ApiError('VALIDATION', 'from must be on or before to');
+  return { from, to };
+}
+
+/** Today's date in India time, YYYY-MM-DD. */
+function todayIst_() {
+  return Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd');
 }
 
 /** Fields whose value differs, as { field: { old, new } }. */

@@ -44,7 +44,7 @@ const TABS = {
     fields: {
       txnDate:           { type: 'date', required: true },
       customerName:      { type: 'string', required: true, max: 100 },
-      amount:            { type: 'number', required: true, min: 0.01 },
+      amount:            { type: 'number', required: true, min: 0.01, max: 1000000000 },
       commissionRatePct: { type: 'number', required: true, min: 0, max: 100 },
       commission:        { type: 'number', min: 0 },
       repaidStatus:      { type: 'enum', values: REPAID_STATUSES, required: true, default: 'PENDING' },
@@ -89,3 +89,9 @@ const AUDIT_TAB = 'AuditLog';
 const DEFAULT_SETTINGS = {
   defaultCommissionRatePct: '0.30'
 };
+
+/** The form asks "Are you sure?" for rates above this, to catch typing mistakes. */
+const RATE_WARNING_ABOVE_PCT = 2;
+
+/** The UI offers Undo for 10 s after a delete; the server allows 30 s for network delay. */
+const UNDO_GRACE_MS = 30 * 1000;

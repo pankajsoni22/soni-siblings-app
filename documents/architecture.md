@@ -320,6 +320,7 @@ flowchart TB
         partnersm["Partners.gs<br/>save whole list, 100% rule"]
         txnm["Transactions.gs<br/>save, repaid, delete,<br/>restore, history"]
         reportm["Reports.gs<br/>totals, by partner,<br/>by month, pending"]
+        settingsm["Settings.gs<br/>getConfig, default rate"]
     end
 
     subgraph core["Core"]
@@ -334,7 +335,8 @@ flowchart TB
     sheet[("Google Sheet")]
 
     entry --> authm
-    entry --> usersm & partnersm & txnm & reportm
+    entry --> usersm & partnersm & txnm & reportm & settingsm
+    settingsm --> sheetm
     authm --> sheetm
     usersm --> sheetm
     partnersm --> sheetm

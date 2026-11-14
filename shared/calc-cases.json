@@ -1,0 +1,50 @@
+{
+  "_comment": "Expected results of the money rules, shared by apps-script/Money.gs and src/lib/money.ts. Shares are listed in partner order. All results are in paise.",
+  "cases": [
+    {
+      "name": "worked example from the requirements",
+      "amount": 500000, "ratePct": 0.30, "sharesPct": [40, 30, 30],
+      "commissionPaise": 150000, "earningsPaise": [60000, 45000, 45000]
+    },
+    {
+      "name": "equal three-way split with a 33.34% last share",
+      "amount": 100000, "ratePct": 0.30, "sharesPct": [33.33, 33.33, 33.34],
+      "commissionPaise": 30000, "earningsPaise": [9999, 9999, 10002]
+    },
+    {
+      "name": "amount with paise rounds commission half up",
+      "amount": 12345.67, "ratePct": 0.30, "sharesPct": [50, 50],
+      "commissionPaise": 3704, "earningsPaise": [1852, 1852]
+    },
+    {
+      "name": "exact half paisa rounds up; one paisa goes to the last partner",
+      "amount": 50, "ratePct": 0.01, "sharesPct": [50, 50],
+      "commissionPaise": 1, "earningsPaise": [0, 1]
+    },
+    {
+      "name": "leftover goes to the last partner with a non-zero share",
+      "amount": 1000, "ratePct": 0.30, "sharesPct": [60, 40, 0],
+      "commissionPaise": 300, "earningsPaise": [180, 120, 0]
+    },
+    {
+      "name": "four-decimal rate and rounding leftover",
+      "amount": 200000, "ratePct": 0.275, "sharesPct": [33.33, 33.33, 33.34],
+      "commissionPaise": 55000, "earningsPaise": [18331, 18331, 18338]
+    },
+    {
+      "name": "large amount stays exact",
+      "amount": 99999999.99, "ratePct": 0.30, "sharesPct": [100],
+      "commissionPaise": 30000000, "earningsPaise": [30000000]
+    },
+    {
+      "name": "maximum amount at a near-100% rate stays exact",
+      "amount": 1000000000, "ratePct": 99.9999, "sharesPct": [25, 25, 25, 25],
+      "commissionPaise": 99999900000, "earningsPaise": [24999975000, 24999975000, 24999975000, 24999975000]
+    },
+    {
+      "name": "single partner gets everything",
+      "amount": 7777.77, "ratePct": 1.5, "sharesPct": [100],
+      "commissionPaise": 11667, "earningsPaise": [11667]
+    }
+  ]
+}

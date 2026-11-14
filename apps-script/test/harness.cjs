@@ -78,7 +78,11 @@ function makeEnv({ apostrophe = 'swallow', maxRows = 5, props = {} } = {}) {
       getUuid: () => crypto.randomUUID(),
       DigestAlgorithm: { SHA_256: 'sha256' },
       computeDigest: (alg, s) => [...crypto.createHash(alg).update(s).digest()],
-      base64EncodeWebSafe: bytes => Buffer.from(bytes).toString('base64url')
+      base64EncodeWebSafe: bytes => Buffer.from(bytes).toString('base64url'),
+      formatDate: (date, timeZone, pattern) => {
+        if (pattern !== 'yyyy-MM-dd') throw new Error('mock formatDate supports yyyy-MM-dd only');
+        return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+      }
     },
     UrlFetchApp: {
       // Test tokens look like "tok:<email>" or "tok:<email>:<audience>"; anything else is invalid.
