@@ -11,7 +11,7 @@ import { ToastProvider } from '../components/ToastProvider.tsx';
 import { config } from '../config.ts';
 import '@fontsource-variable/inter';
 import '../styles.css';
-import { installMockBackend } from './mockBackend.ts';
+import { apiCalls, installMockBackend } from './mockBackend.ts';
 
 installMockBackend(config.apiUrl);
 
@@ -30,6 +30,22 @@ const auth: AuthContextValue = {
  * and writes the findings into the page (and the console), so a headless browser can read them
  * with --dump-dom.
  */
+/**
+ * preview.html?calls=/transactions,/settings#/ opens the first screen, then visits each listed route
+ * (1.5 s apart, like clicking around) and writes every API call made into the page, for --dump-dom.
+ */
+const visits = new URLSearchParams(location.search).get('calls');
+if (visits !== null) {
+  const routes = visits ? visits.split(',') : [];
+  routes.forEach((r, i) => window.setTimeout(() => { location.hash = r; }, 1500 * (i + 1)));
+  window.setTimeout(() => {
+    const out = document.createElement('pre');
+    out.id = 'api-calls';
+    out.textContent = `CALLS ${apiCalls.length}: ${apiCalls.join(' ')}`;
+    document.body.append(out);
+  }, 1500 * (routes.length + 1));
+}
+
 if (new URLSearchParams(location.search).has('axe')) {
   window.setTimeout(() => {
     void import('axe-core').then(async ({ default: axe }) => {

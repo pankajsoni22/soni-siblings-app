@@ -24,5 +24,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests that run the backend in Node are checked by tsconfig.node.json.
+  "exclude": ["src/**/*.parity.test.ts"]
 }

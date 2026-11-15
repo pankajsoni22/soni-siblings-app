@@ -2,23 +2,25 @@ import { useState, type FormEvent } from 'react';
 import { ApiError } from '../api/ApiError.ts';
 import type { AppConfig } from '../api/types.ts';
 import { useApi } from '../api/useApi.ts';
-import { useQuery } from '../api/useQuery.ts';
 import FormField from '../components/FormField.tsx';
 import PageHeader from '../components/PageHeader.tsx';
 import { ErrorState, Loading } from '../components/States.tsx';
 import { useToast } from '../components/toastContext.ts';
+import { dataStore } from '../data/store.ts';
+import { useData } from '../data/useData.ts';
 import { describedBy } from '../lib/a11y.ts';
 import { hasMaxDecimals, parseNumber } from '../lib/money.ts';
 import { formatPct } from '../lib/transactionForm.ts';
 
 export default function SettingsPage() {
-  const config = useQuery('config', api => api.getConfig());
+  const api = useApi();
+  const { config, error } = useData();   // from the local copy; saving refreshes it
   return (
     <section>
       <PageHeader title="Settings" subtitle="Defaults used when recording new entries." />
-      {config.error && !config.data ? <div className="card"><ErrorState error={config.error} onRetry={config.reload} /></div>
-        : !config.data ? <div className="card"><Loading /></div>
-          : <RateForm key={config.data.defaultCommissionRatePct} config={config.data} onSaved={config.reload} />}
+      {error && !config ? <div className="card"><ErrorState error={error} onRetry={() => { dataStore.sync(api).catch(() => {}); }} /></div>
+        : !config ? <div className="card"><Loading /></div>
+          : <RateForm key={config.defaultCommissionRatePct} config={config} />}
     </section>
   );
 }
@@ -31,7 +33,7 @@ function rateError(input: string): string | null {
   return null;
 }
 
-function RateForm({ config, onSaved }: { config: AppConfig; onSaved: () => void }) {
+function RateForm({ config }: { config: AppConfig }) {
   const api = useApi();
   const toast = useToast();
   const [rate, setRate] = useState(formatPct(config.defaultCommissionRatePct));
@@ -47,7 +49,6 @@ function RateForm({ config, onSaved }: { config: AppConfig; onSaved: () => void 
     try {
       const saved = await api.saveSettings(parseNumber(rate) ?? 0);
       toast(`Default commission rate is now ${formatPct(saved.defaultCommissionRatePct)}%`);
-      onSaved();
     } catch (err) {
       if (!ApiError.is(err, 'AUTH_REQUIRED')) setError(err instanceof Error ? err.message : 'Could not save');
     } finally {

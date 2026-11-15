@@ -2,7 +2,7 @@ import { config } from '../config.ts';
 import { ApiError } from './ApiError.ts';
 import type {
   Action, ApiResponse, AppConfig, AppUser, DeleteResult, HistoryEntry, Me, Partner, PartnerInput,
-  RepaidStatus, Report, Role, SessionGrant, ShareInput, Transaction, TransactionInput
+  RepaidStatus, Report, Role, SessionGrant, ShareInput, SyncResult, Transaction, TransactionInput
 } from './types.ts';
 
 export interface Credentials {
@@ -15,6 +15,8 @@ interface ApiClientOptions {
   credentials: Credentials | null;
   /** Called when the token is missing, about to expire, or rejected by the server. */
   onAuthExpired?: () => void;
+  /** Called after every successful write with its result, e.g. to update the local copy. */
+  onWrite?: (action: Action, payload: object, result: unknown, client: ApiClient) => void;
 }
 
 const EXPIRY_MARGIN_MS = 60_000;
@@ -36,10 +38,12 @@ const WRITE_ACTIONS = new Set<Action>([
 export class ApiClient {
   readonly #credentials: Credentials | null;
   readonly #onAuthExpired: () => void;
+  readonly #onWrite: ApiClientOptions['onWrite'];
 
-  constructor({ credentials, onAuthExpired = () => {} }: ApiClientOptions) {
+  constructor({ credentials, onAuthExpired = () => {}, onWrite }: ApiClientOptions) {
     this.#credentials = credentials;
     this.#onAuthExpired = onAuthExpired;
+    this.#onWrite = onWrite;
   }
 
   me(): Promise<Me> {
@@ -49,6 +53,11 @@ export class ApiClient {
   /** Swaps a fresh Google token for a 14-day app session. Only works with a Google token. */
   startSession(): Promise<SessionGrant> {
     return this.#call('startSession', {});
+  }
+
+  /** Everything the app shows, or only what changed since `since` (a cursor from the last sync). */
+  sync(since?: string): Promise<SyncResult> {
+    return this.#call('sync', since ? { since } : {});
   }
 
   /** Default rate, active partners with default shares, and today's date (India time). */
@@ -174,6 +183,7 @@ export class ApiClient {
       if (json.error.code === 'AUTH_REQUIRED') this.#onAuthExpired();
       throw new ApiError(json.error.code, json.error.message);
     }
+    if (WRITE_ACTIONS.has(action)) this.#onWrite?.(action, payload, json.data, this);
     return json.data;
   }
 }

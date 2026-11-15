@@ -366,3 +366,53 @@ describe('listing and reports', () => {
     err(env.call(tok(READER), 'report', { from: '2000-01-01', to: '2026-01-01' }), 'VALIDATION');
   });
 });
+
+describe('sync', () => {
+  test('a first sync sends everything live; later syncs send only changes and deleted ids', () => {
+    const { env, shares, txn, save } = business();
+    const t1 = ok(save(WRITER, { transaction: txn(), shares: shares(40, 30, 30) }));
+    const t2 = ok(save(WRITER, { transaction: txn({ customerName: 'Anita' }), shares: shares(40, 30, 30) }));
+    ok(env.call(tok(WRITER), 'deleteTransaction', { id: t2.id }));
+
+    const first = ok(env.call(tok(READER), 'sync', {}));
+    assert.equal(first.full, true);
+    assert.deepEqual(first.transactions.map(t => t.id), [t1.id]);
+    assert.equal(first.transactions[0].shares.length, 3);
+    assert.deepEqual(first.removed, []);
+    assert.equal(first.user.role, 'USER_RO');
+    assert.equal(first.config.partners.length, 3);
+    assert.deepEqual(first.partners.map(p => p.name), ['Partner A', 'Partner B', 'Partner C']);
+    assert.ok(first.cursor >= t1.updatedAt);
+
+    // Nothing more than the overlap window resends; move the cursor past it to check filtering.
+    const later = new Date(Date.parse(first.cursor) + 10 * 60 * 1000).toISOString();
+    const none = ok(env.call(tok(READER), 'sync', { since: later }));
+    assert.equal(none.full, false);
+    assert.deepEqual([none.transactions, none.removed], [[], []]);
+    assert.equal(none.cursor, later);
+
+    const incremental = ok(env.call(tok(READER), 'sync', { since: first.cursor }));
+    assert.equal(incremental.full, false);
+    assert.ok(incremental.removed.includes(t2.id));
+    assert.ok(!incremental.transactions.some(t => t.id === t2.id));
+    assert.ok(!('customerName' in incremental), 'deleted rows are sent as ids only');
+  });
+
+  test('changes after the cursor arrive, including a restore', () => {
+    const { env, shares, txn, save } = business();
+    const t1 = ok(save(WRITER, { transaction: txn(), shares: shares(40, 30, 30) }));
+    ok(env.call(tok(WRITER), 'deleteTransaction', { id: t1.id }));
+    const s = ok(env.call(tok(READER), 'sync', {}));
+    assert.deepEqual(s.transactions, []);
+    ok(env.call(tok(OWNER), 'restoreTransaction', { id: t1.id }));
+    const next = ok(env.call(tok(READER), 'sync', { since: s.cursor }));
+    assert.deepEqual(next.transactions.map(t => t.id), [t1.id]);
+    assert.ok(next.cursor > s.cursor);
+  });
+
+  test('a removed user cannot sync', () => {
+    const { env } = business();
+    ok(env.call(tok(OWNER), 'removeUser', { email: READER }));
+    err(env.call(tok(READER), 'sync', {}), 'FORBIDDEN');
+  });
+});

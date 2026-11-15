@@ -112,6 +112,18 @@ function handle(action: string, p: Payload): unknown {
   switch (action) {
     case 'me': return { email: 'pankaj@gmail.com', name: 'Pankaj', role: 'ADMIN', isOwner: true };
     case 'getConfig': return config;
+    case 'sync': {   // always a full copy: the preview has no other writers
+      const live = txns.filter(t => !t.deleted);
+      return {
+        user: { email: 'pankaj@gmail.com', name: 'Pankaj', role: 'ADMIN', isOwner: true },
+        config,
+        partners: allPartners.map(x => ({ id: x.id, name: x.name, active: x.active })),
+        full: true,
+        cursor: live.reduce((m, t) => (t.updatedAt > m ? t.updatedAt : m), ''),
+        transactions: live,
+        removed: []
+      };
+    }
     case 'listTransactions': {
       const withDeleted = p.includeDeleted === true;
       return txns
@@ -177,6 +189,9 @@ function handle(action: string, p: Payload): unknown {
   }
 }
 
+/** Every action called, in order (preview.html?calls shows them). */
+export const apiCalls: string[] = [];
+
 /** Replaces window.fetch for API calls. */
 export function installMockBackend(apiUrl: string): void {
   const realFetch = window.fetch.bind(window);
@@ -185,6 +200,7 @@ export function installMockBackend(apiUrl: string): void {
     if (url !== apiUrl) return realFetch(input, init);
     const raw = typeof init?.body === 'string' ? init.body : '{}';
     const body = JSON.parse(raw) as { action: string; payload: Payload };
+    apiCalls.push(body.action);
     await new Promise(r => setTimeout(r, 150));   // feel of a real round trip
     try {
       return new Response(JSON.stringify({ ok: true, data: handle(body.action, body.payload) }));

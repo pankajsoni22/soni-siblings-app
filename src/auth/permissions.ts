@@ -8,6 +8,7 @@ import type { Action, Role } from '../api/types.ts';
 export const PERMISSIONS: Record<Action, readonly Role[]> = {
   me:                 ['ADMIN', 'USER_W', 'USER_RO'],
   startSession:       ['ADMIN', 'USER_W', 'USER_RO'],
+  sync:               ['ADMIN', 'USER_W', 'USER_RO'],
   getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
   listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
   getTransaction:     ['ADMIN', 'USER_W', 'USER_RO'],

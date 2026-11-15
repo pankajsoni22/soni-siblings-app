@@ -4,6 +4,7 @@ import { ROLE_LABELS } from '../../api/types.ts';
 import { can } from '../../auth/permissions.ts';
 import { useAuth } from '../../auth/useAuth.ts';
 import Brand from './Brand.tsx';
+import SyncButton from './SyncButton.tsx';
 import { NAV_ITEMS, initialsOf } from './navItems.ts';
 
 /** Computer screens: brand, navigation by role, and the signed-in user with sign-out. */
@@ -34,6 +35,7 @@ export default function Sidebar() {
           ))}
         </nav>
       )}
+      <SyncButton />
       <div className="sidebar-user">
         <span className="avatar" aria-hidden="true">{initialsOf(name)}</span>
         <span className="sidebar-user-text">

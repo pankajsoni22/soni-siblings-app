@@ -5,7 +5,6 @@ import { ApiError } from '../api/ApiError.ts';
 import type { RepaidStatus, Transaction } from '../api/types.ts';
 import { REPAID_LABELS } from '../api/types.ts';
 import { useApi } from '../api/useApi.ts';
-import { useQuery } from '../api/useQuery.ts';
 import { can } from '../auth/permissions.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import ConfirmDialog from '../components/ConfirmDialog.tsx';
@@ -21,14 +20,11 @@ import { periodFor, periodKeyFrom, todayIst } from '../lib/fy.ts';
 import { formatINR, fromPaise, toPaise } from '../lib/money.ts';
 import { partnerColor } from '../lib/partnerColors.ts';
 import { formatPct } from '../lib/transactionForm.ts';
+import { transactionsIn } from '../lib/report.ts';
+import { dataStore } from '../data/store.ts';
+import { useData } from '../data/useData.ts';
 
 type StatusFilter = 'ALL' | RepaidStatus;
-
-/** Local changes shown before the list reloads. Only applied to the data they were made on. */
-interface Patches {
-  base: Transaction[] | undefined;
-  changes: Map<string, Transaction | null>;   // null = deleted
-}
 
 export default function TransactionsPage() {
   const api = useApi();
@@ -43,22 +39,13 @@ export default function TransactionsPage() {
   const [period, setPeriod] = useState(() => periodFor(periodKeyFrom(searchParams.get('period'), 'thisMonth'), today));
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
-  const list = useQuery(`txns:${period.from}:${period.to}`, a => a.listTransactions(period.from, period.to));
-
-  const [patches, setPatches] = useState<Patches>({ base: undefined, changes: new Map() });
+  // From the local copy: changing the period needs no server call. Saves, deletes and restores
+  // update the copy from the server's reply (see useApi).
+  const data = useData();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Transaction | null>(null);
 
-  const rows = useMemo(() => {
-    const changes = patches.base === list.data ? patches.changes : new Map<string, Transaction | null>();
-    const base = list.data ?? [];
-    const out: Transaction[] = [];
-    for (const t of base) {
-      const c = changes.has(t.id) ? changes.get(t.id) : t;
-      if (c) out.push(c);
-    }
-    return out;
-  }, [list.data, patches]);
+  const rows = useMemo(() => transactionsIn(data.txns, period.from, period.to), [data.txns, period.from, period.to]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -72,16 +59,13 @@ export default function TransactionsPage() {
     commission: fromPaise(filtered.reduce((s, t) => s + toPaise(t.commission), 0))
   }), [filtered]);
 
-  const patch = (id: string, value: Transaction | null) =>
-    setPatches(p => ({ base: list.data, changes: new Map(p.base === list.data ? p.changes : []).set(id, value) }));
-
   const failMessage = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong');
 
   async function toggleRepaid(t: Transaction) {
     const next: RepaidStatus = t.repaidStatus === 'PENDING' ? 'REPAID' : 'PENDING';
     setBusyId(t.id);
     try {
-      patch(t.id, await api.setRepaid(t.id, next));
+      await api.setRepaid(t.id, next);
     } catch (err) {
       if (!ApiError.is(err, 'AUTH_REQUIRED')) toast(failMessage(err), 'error');
     } finally {
@@ -95,7 +79,6 @@ export default function TransactionsPage() {
     setBusyId(t.id);
     try {
       await api.deleteTransaction(t.id);
-      patch(t.id, null);
       setToDelete(null);
       toast(`Deleted ${t.customerName}, ${formatINR(t.amount)}`, 'info', {
         actionLabel: 'Undo',
@@ -112,7 +95,7 @@ export default function TransactionsPage() {
 
   async function undo(t: Transaction) {
     try {
-      patch(t.id, await api.restoreTransaction(t.id));
+      await api.restoreTransaction(t.id);
       toast('Restored');
     } catch (err) {
       if (!ApiError.is(err, 'AUTH_REQUIRED')) toast(failMessage(err), 'error');
@@ -149,16 +132,15 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {list.error && !list.data ? (
-        <div className="card"><ErrorState error={list.error} onRetry={list.reload} /></div>
-      ) : !list.data ? (
+      {data.error && !data.config ? (
+        <div className="card"><ErrorState error={data.error} onRetry={() => { dataStore.sync(api).catch(() => {}); }} /></div>
+      ) : !data.config ? (
         <div className="card"><Loading /></div>
       ) : (
         <>
           <p className="summary" aria-live="polite">
             <b>{filtered.length.toLocaleString('en-IN')}</b> {filtered.length === 1 ? 'entry' : 'entries'} · lent <b><Money value={totals.lent} /></b> ·
             commission <b><Money value={totals.commission} /></b>
-            {list.loading && ' · refreshing…'}
           </p>
           {filtered.length === 0 ? (
             <div className="card">

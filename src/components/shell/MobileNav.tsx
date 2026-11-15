@@ -5,6 +5,7 @@ import { ROLE_LABELS } from '../../api/types.ts';
 import { can } from '../../auth/permissions.ts';
 import { useAuth } from '../../auth/useAuth.ts';
 import Brand from './Brand.tsx';
+import SyncButton from './SyncButton.tsx';
 import { NAV_ITEMS, initialsOf } from './navItems.ts';
 
 /** Phones: a slim top bar. */
@@ -13,8 +14,11 @@ export function MobileTop() {
   return (
     <header className="mobile-top">
       <Brand />
-      <span className="avatar" title={session?.profile.email} aria-label={`Signed in as ${me?.name ?? ''}`}>
-        {initialsOf(session?.profile.name ?? me?.name ?? me?.email)}
+      <span className="mobile-top-actions">
+        <SyncButton compact />
+        <span className="avatar" title={session?.profile.email} aria-label={`Signed in as ${me?.name ?? ''}`}>
+          {initialsOf(session?.profile.name ?? me?.name ?? me?.email)}
+        </span>
       </span>
     </header>
   );

@@ -23,6 +23,7 @@ class ApiError extends Error {
 const ACTIONS = {
   me:                 ['ADMIN', 'USER_W', 'USER_RO'],
   startSession:       ['ADMIN', 'USER_W', 'USER_RO'],
+  sync:               ['ADMIN', 'USER_W', 'USER_RO'],
   getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
   listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
   getTransaction:     ['ADMIN', 'USER_W', 'USER_RO'],
@@ -72,6 +73,7 @@ function dispatch_(action, payload, user) {
   switch (action) {
     case 'me':                 return { email: user.email, name: user.name, role: user.role, isOwner: user.isOwner };
     case 'startSession':       return startSession_(user);
+    case 'sync':               return sync_(payload, user);
     case 'getConfig':          return getConfig_();
     case 'listTransactions':   return listTransactions_(payload, user);
     case 'getTransaction':     return getTransaction_(payload);

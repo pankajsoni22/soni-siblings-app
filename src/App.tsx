@@ -7,6 +7,7 @@ import OfflineBanner from './components/OfflineBanner.tsx';
 import SessionExpiredDialog from './components/SessionExpiredDialog.tsx';
 import { MobileTop, TabBar } from './components/shell/MobileNav.tsx';
 import Sidebar from './components/shell/Sidebar.tsx';
+import { useAutoSync } from './data/useData.ts';
 import { useFocusOnNavigate } from './components/useFocusOnNavigate.ts';
 import DashboardPage from './pages/DashboardPage.tsx';
 import NoAccessPage from './pages/NoAccessPage.tsx';
@@ -54,6 +55,7 @@ export default function App() {
 
 function Shell() {
   const mainRef = useRef<HTMLElement>(null);
+  useAutoSync();
   useFocusOnNavigate(mainRef);
   return (
     <div className="app">

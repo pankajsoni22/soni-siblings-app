@@ -144,7 +144,7 @@ export interface Report {
 }
 
 export type Action =
-  | 'me' | 'startSession' | 'getConfig' | 'listTransactions' | 'getTransaction' | 'report'
+  | 'me' | 'startSession' | 'sync' | 'getConfig' | 'listTransactions' | 'getTransaction' | 'report'
   | 'saveTransaction' | 'setRepaid' | 'deleteTransaction' | 'restoreTransaction'
   | 'getHistory' | 'listPartners' | 'savePartners' | 'saveSettings'
   | 'listUsers' | 'saveUser' | 'removeUser';
@@ -168,4 +168,20 @@ export interface SessionGrant {
   /** Expiry, epoch milliseconds. */
   exp: number;
   user: Me;
+}
+
+/** Everything the app shows, or what changed since `since` (see apps-script/Sync.gs). */
+export interface SyncResult {
+  user: Me;
+  config: AppConfig;
+  /** All partners, active and inactive, in partner order. */
+  partners: Pick<Partner, 'id' | 'name' | 'active'>[];
+  /** True when `transactions` is the complete list (no `since` was sent). */
+  full: boolean;
+  /** Pass back as `since` next time. */
+  cursor: string;
+  /** Live transactions that are new or changed. */
+  transactions: Transaction[];
+  /** Ids of transactions deleted since `since`. */
+  removed: string[];
 }

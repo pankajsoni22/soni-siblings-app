@@ -3,6 +3,7 @@ import { ApiClient } from '../api/ApiClient.ts';
 import { ApiError } from '../api/ApiError.ts';
 import type { Me } from '../api/types.ts';
 import { config } from '../config.ts';
+import { dataStore } from '../data/store.ts';
 import { AuthContext, type AuthContextValue, type AuthStatus, type Session } from './authContext.ts';
 import { decodeJwt, getGsi, waitForGsi } from './gsi.ts';
 import { clearSession, loadSession, parseStored, saveSession, SESSION_KEY, type StoredSession } from './sessionStore.ts';
@@ -23,7 +24,11 @@ let onCredential: (response: google.accounts.id.CredentialResponse) => void = ()
  * 3. When the session ends, the app stays open under a "sign in again" dialog.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [initial] = useState(loadSession);
+  const [initial] = useState(() => {
+    const saved = loadSession();
+    if (saved) dataStore.open(saved.me.email);   // the saved copy of the data shows at once
+    return saved;
+  });
   const [status, setStatus] = useState<AuthStatus>(initial ? 'ready' : 'loading');
   const [session, setSession] = useState<Session | null>(initial?.session ?? null);
   const [me, setMe] = useState<Me | null>(initial?.me ?? null);
@@ -37,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.reload();            // a different person: start from a clean app
       return;
     }
+    dataStore.open(stored.me.email);
     meRef.current = stored.me;
     tokenRef.current = stored.session.token;
     setSession(stored.session);
@@ -60,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (ApiError.is(err, 'FORBIDDEN')) {
         clearSession();
+        dataStore.clear();
         setSession(google);                // NoAccessPage shows which account was refused
         setStatus('forbidden');
       } else {
@@ -74,22 +81,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onCredential = response => { void handleCredential(response); };
   }, [handleCredential]);
 
-  // Opened from a saved session: confirm the role is still current, without holding up the page.
+  // Opened from a saved session: the first sync confirms access is still current (and brings the
+  // data), without holding up the page. Later syncs keep the role up to date.
   useEffect(() => {
     if (!initial) return;
-    new ApiClient({ credentials: initial.session }).me()
-      .then(user => {
-        const stored = { session: initial.session, me: user };
-        saveSession(stored);
-        meRef.current = user;
-        setMe(user);
-      })
+    dataStore.sync(new ApiClient({ credentials: initial.session }))
       .catch((err: unknown) => {
         if (ApiError.is(err, 'FORBIDDEN')) {
           clearSession();
+          dataStore.clear();
           setStatus('forbidden');
         } else if (ApiError.is(err, 'AUTH_REQUIRED')) {
           clearSession();
+          dataStore.clear();
           meRef.current = null;
           setSession(null);
           setMe(null);
@@ -99,6 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // NETWORK / SERVER: keep the session; the next request will show the problem.
       });
   }, [initial]);
+
+  // A sync reports the current role: keep `me` (and the saved session) in step with it.
+  useEffect(() => dataStore.subscribe(() => {
+    const user = dataStore.getSnapshot().user;
+    const current = meRef.current;
+    if (!user || !current || user.email !== current.email) return;
+    if (user.role === current.role && user.name === current.name && user.isOwner === current.isOwner) return;
+    meRef.current = user;
+    setMe(user);
+    const stored = loadSession();
+    if (stored) saveSession({ ...stored, me: user });
+  }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     clearSession();
+    dataStore.clear();
     try { localStorage.setItem(SIGNOUT_KEY, String(Date.now())); } catch { /* other tabs find out on their next request */ }
     getGsi()?.disableAutoSelect();
     window.location.reload();             // drops the token and all app state
