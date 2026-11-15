@@ -91,6 +91,15 @@ export class DataStore {
   }
 
   /**
+   * Removes the copy from storage but keeps showing it in this tab. Used when the session ends
+   * while the app is open: the person can sign in again and carry on, but nothing is left on the
+   * device if they don't.
+   */
+  forgetSaved() {
+    this.#removeSaved();
+  }
+
+  /**
    * Fetches changes (or everything, when `full` or due). Concurrent calls share one request.
    * Resolves null if there is no signed-in owner yet; rejects on failure (also kept in `error`).
    */

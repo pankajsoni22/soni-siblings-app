@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initial] = useState(() => {
     const saved = loadSession();
     if (saved) dataStore.open(saved.me.email);   // the saved copy of the data shows at once
+    else dataStore.clear();                      // no valid session: leave no business data on the device
     return saved;
   });
   const [status, setStatus] = useState<AuthStatus>(initial ? 'ready' : 'loading');
@@ -105,8 +106,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [initial]);
 
   // A sync reports the current role: keep `me` (and the saved session) in step with it.
+  // A sync refused with FORBIDDEN means this person was removed: drop everything they had.
   useEffect(() => dataStore.subscribe(() => {
-    const user = dataStore.getSnapshot().user;
+    const { user, error: syncError } = dataStore.getSnapshot();
+    if (ApiError.is(syncError, 'FORBIDDEN')) {
+      clearSession();
+      dataStore.clear();
+      setStatus('forbidden');
+      return;
+    }
     const current = meRef.current;
     if (!user || !current || user.email !== current.email) return;
     if (user.role === current.role && user.name === current.name && user.isOwner === current.isOwner) return;
@@ -164,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     clearSession();
+    dataStore.forgetSaved();               // stays on screen in this tab only, until they sign in again
     setStatus(s => (s === 'ready' || s === 'expired' ? 'expired' : 'signedOut'));
     getGsi()?.prompt();
   }, [adopt]);
