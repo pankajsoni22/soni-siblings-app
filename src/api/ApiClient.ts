@@ -2,7 +2,7 @@ import { config } from '../config.ts';
 import { ApiError } from './ApiError.ts';
 import type {
   Action, ApiResponse, AppConfig, AppUser, DeleteResult, HistoryEntry, Me, Partner, PartnerInput,
-  RepaidStatus, Report, Role, ShareInput, Transaction, TransactionInput
+  RepaidStatus, Report, Role, SessionGrant, ShareInput, Transaction, TransactionInput
 } from './types.ts';
 
 export interface Credentials {
@@ -44,6 +44,11 @@ export class ApiClient {
 
   me(): Promise<Me> {
     return this.#call('me', {});
+  }
+
+  /** Swaps a fresh Google token for a 14-day app session. Only works with a Google token. */
+  startSession(): Promise<SessionGrant> {
+    return this.#call('startSession', {});
   }
 
   /** Default rate, active partners with default shares, and today's date (India time). */

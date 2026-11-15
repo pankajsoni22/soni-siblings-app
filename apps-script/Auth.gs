@@ -6,13 +6,25 @@
  *   OWNER_EMAIL       the Sheet owner's Google email; always an admin, can never be removed
  */
 
-/** Returns { email, name, role, isOwner } or throws AUTH_REQUIRED / FORBIDDEN. */
-function authenticate_(idToken) {
-  const info = verifyGoogleToken_(idToken);
-  const email = String(info.email).toLowerCase();
+/**
+ * Accepts an app session token (see Session.gs) or a Google ID token.
+ * Returns { email, name, role, isOwner, via } or throws AUTH_REQUIRED / FORBIDDEN.
+ * The Users tab is checked on every call, whichever kind of token it is.
+ */
+function authenticate_(token) {
+  let email, name, via;
+  if (typeof token === 'string' && token.startsWith(SESSION_PREFIX)) {
+    ({ email, name } = verifySession_(token));
+    via = 'session';
+  } else {
+    const info = verifyGoogleToken_(token);
+    email = String(info.email).toLowerCase();
+    name = info.name;
+    via = 'google';
+  }
   const access = lookupAccess_(email);
   if (!access) throw new ApiError('FORBIDDEN', 'Your account does not have access');
-  return { email, name: info.name || email, role: access.role, isOwner: access.isOwner };
+  return { email, name: name || email, role: access.role, isOwner: access.isOwner, via };
 }
 
 /**

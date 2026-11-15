@@ -1,5 +1,5 @@
 import { Download, Hourglass, IndianRupee, Percent, Plus, ReceiptText } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/ApiError.ts';
 import { useApi } from '../api/useApi.ts';
@@ -7,7 +7,7 @@ import { useQuery } from '../api/useQuery.ts';
 import { can } from '../auth/permissions.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import Delta from '../components/charts/Delta.tsx';
-import MonthlyChart from '../components/charts/MonthlyChart.tsx';
+import TrendChart from '../components/charts/TrendChart.tsx';
 import PartnerEarnings from '../components/charts/PartnerEarnings.tsx';
 import RecentEntries from '../components/charts/RecentEntries.tsx';
 import StatCard from '../components/charts/StatCard.tsx';
@@ -17,7 +17,8 @@ import PeriodPicker from '../components/PeriodPicker.tsx';
 import { EmptyState, ErrorState, Loading } from '../components/States.tsx';
 import { useToast } from '../components/toastContext.ts';
 import { downloadCsv, partnerColumnsOf, transactionsToCsv } from '../lib/csv.ts';
-import { comparisonFor, percentChange, periodFor, periodKeyFrom, todayIst, trailingMonths } from '../lib/fy.ts';
+import { bucketize, chartRange, defaultGrain, grainsFor, type Grain } from '../lib/buckets.ts';
+import { comparisonFor, formatShortDate, percentChange, periodFor, periodKeyFrom, todayIst } from '../lib/fy.ts';
 import { formatINR } from '../lib/money.ts';
 
 export default function DashboardPage() {
@@ -28,14 +29,19 @@ export default function DashboardPage() {
   const [today] = useState(todayIst);
   const [period, setPeriod] = useState(() => periodFor(periodKeyFrom(searchParams.get('period'), 'thisMonth'), today));
   const prev = comparisonFor(period, today);
-  const singleMonth = period.from.slice(0, 7) === period.to.slice(0, 7);
-  const trend = singleMonth ? trailingMonths(period.to, 12) : period;
 
   const report = useQuery(`report:${period.from}:${period.to}`, a => a.report(period.from, period.to));
-  const before = useQuery(`report:${prev.from}:${prev.to}`, a => a.report(prev.from, prev.to));
-  const trendReport = useQuery(`report:${trend.from}:${trend.to}`, a => (singleMonth ? a.report(trend.from, trend.to) : a.report(period.from, period.to)));
+  const before = useQuery(prev ? `report:${prev.from}:${prev.to}` : 'report:none', a => (prev ? a.report(prev.from, prev.to) : Promise.resolve(null)));
   const txns = useQuery(`txns:${period.from}:${period.to}`, a => a.listTransactions(period.from, period.to));
   const [exporting, setExporting] = useState(false);
+
+  // Chart grouping: the default suits the range; a choice sticks until the range changes.
+  const range = useMemo(() => chartRange(period.from, period.to, txns.data ?? []), [period.from, period.to, txns.data]);
+  const grains = grainsFor(range.from, range.to);
+  const [grainChoice, setGrainChoice] = useState<{ range: string; grain: Grain } | null>(null);
+  const rangeKey = `${range.from}:${range.to}`;
+  const grain = grainChoice?.range === rangeKey && grains.includes(grainChoice.grain) ? grainChoice.grain : defaultGrain(range.from, range.to);
+  const buckets = useMemo(() => bucketize(txns.data ?? [], range.from, range.to, grain), [txns.data, range.from, range.to, grain]);
 
   async function exportCsv() {
     setExporting(true);
@@ -53,8 +59,8 @@ export default function DashboardPage() {
   const p = before.data?.totals;
   /** "↑ 12% vs last month", or the fallback when the previous period has nothing to compare with. */
   const compare = (now: number, then: number | undefined, fallback: string | null = null) => {
-    const c = then === undefined ? null : percentChange(now, then);
-    return c === null ? fallback : <><Delta change={c} /> <span>{prev.label}</span></>;
+    const c = then === undefined || !prev ? null : percentChange(now, then);
+    return c === null || !prev ? fallback : <><Delta change={c} /> <span>{prev.label}</span></>;
   };
   const periodQuery = period.key !== 'custom' ? `?period=${period.key}` : '';
 
@@ -98,10 +104,10 @@ export default function DashboardPage() {
 
           <div className="dash-grid">
             <div className="area-chart">
-              {trendReport.data && trendReport.data.byMonth.length > 0 && (
-                <MonthlyChart months={trendReport.data.byMonth}
-                  title={singleMonth ? 'Last 12 months' : 'Monthly trend'}
-                  subtitle={singleMonth ? 'For context around the selected month' : period.detail} />
+              {txns.data && txns.data.length > 0 && (
+                <TrendChart buckets={buckets} grain={grain} grains={grains}
+                  onGrainChange={g => setGrainChoice({ range: rangeKey, grain: g })}
+                  subtitle={period.key === 'allTime' ? `${formatShortDate(range.from)} – ${formatShortDate(range.to)}` : period.detail} />
               )}
             </div>
             <div className="card area-partners">

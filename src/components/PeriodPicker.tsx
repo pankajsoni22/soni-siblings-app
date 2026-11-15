@@ -13,7 +13,9 @@ export default function PeriodPicker({ value, today, onChange, showDetail = true
   showDetail?: boolean;
 }) {
   const id = useId();
-  const pick = (key: PeriodKey) => onChange(periodFor(key, today, { from: value.from, to: value.to }));
+  // A custom range starts from the current one, except "from the beginning" (it would start in 2000).
+  const pick = (key: PeriodKey) => onChange(periodFor(key, today,
+    value.key === 'allTime' ? periodFor('thisMonth', today) : { from: value.from, to: value.to }));
   const setCustom = (from: string, to: string) => {
     if (from && to) onChange(periodFor('custom', today, { from, to }));
   };

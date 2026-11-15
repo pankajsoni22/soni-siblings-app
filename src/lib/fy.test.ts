@@ -61,8 +61,13 @@ describe('periods', () => {
 
 describe('comparison periods', () => {
   const today = '2026-11-14';
+  const compare = (period: ReturnType<typeof periodFor>, on: string) => {
+    const c = comparisonFor(period, on);
+    if (!c) throw new Error(`no comparison for ${period.key}`);
+    return c;
+  };
   const cmp = (key: Parameters<typeof periodFor>[0]) => {
-    const c = comparisonFor(periodFor(key, today), today);
+    const c = compare(periodFor(key, today), today);
     return [c.from, c.to, c.label];
   };
 
@@ -72,22 +77,27 @@ describe('comparison periods', () => {
     expect(cmp('thisQuarter')).toEqual(['2026-07-01', '2026-08-14', 'vs same point last quarter']);
     expect(cmp('thisFY')).toEqual(['2025-04-01', '2025-11-14', 'vs same point FY 2025-26']);
     // a previous month shorter than the elapsed days is clipped to its end
-    const c = comparisonFor(periodFor('thisMonth', '2026-03-31'), '2026-03-31');
+    const c = compare(periodFor('thisMonth', '2026-03-31'), '2026-03-31');
     expect([c.from, c.to]).toEqual(['2026-02-01', '2026-02-28']);
   });
 
   it('compares finished periods to the whole previous one', () => {
     expect(cmp('lastMonth')).toEqual(['2026-09-01', '2026-09-30', 'vs Sep 2026']);
-    expect(comparisonFor(periodFor('lastMonth', '2026-01-10'), '2026-01-10').label).toBe('vs Nov 2025');
-    expect(comparisonFor(periodFor('lastMonth', '2026-02-10'), '2026-02-10').label).toBe('vs Dec 2025');
+    expect(compare(periodFor('lastMonth', '2026-01-10'), '2026-01-10').label).toBe('vs Nov 2025');
+    expect(compare(periodFor('lastMonth', '2026-02-10'), '2026-02-10').label).toBe('vs Dec 2025');
     expect(cmp('lastQuarter')).toEqual(['2026-04-01', '2026-06-30', 'vs Q1']);
-    expect(comparisonFor(periodFor('lastQuarter', '2026-05-01'), '2026-05-01').from).toBe('2025-10-01');
+    expect(compare(periodFor('lastQuarter', '2026-05-01'), '2026-05-01').from).toBe('2025-10-01');
     expect(cmp('lastFY')).toEqual(['2024-04-01', '2025-03-31', 'vs FY 2024-25']);
   });
 
   it('compares a custom range to the same number of days before it', () => {
-    const c = comparisonFor(periodFor('custom', today, { from: '2026-10-01', to: '2026-10-10' }), today);
+    const c = compare(periodFor('custom', today, { from: '2026-10-01', to: '2026-10-10' }), today);
     expect([c.from, c.to, c.label]).toEqual(['2026-09-21', '2026-09-30', 'vs previous 10 days']);
+  });
+
+  it('has no comparison from the beginning', () => {
+    expect(comparisonFor(periodFor('allTime', today), today)).toBeNull();
+    expect(periodFor('allTime', today)).toMatchObject({ from: '2000-01-01', to: today, label: 'From the beginning' });
   });
 
   it('gives trailing months for single-month periods', () => {

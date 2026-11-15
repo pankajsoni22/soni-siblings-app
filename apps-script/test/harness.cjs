@@ -80,6 +80,9 @@ function makeEnv({ apostrophe = 'swallow', maxRows = 5, props = {} } = {}) {
       DigestAlgorithm: { SHA_256: 'sha256' },
       computeDigest: (alg, s) => [...crypto.createHash(alg).update(s).digest()],
       base64EncodeWebSafe: bytes => Buffer.from(bytes).toString('base64url'),
+      base64DecodeWebSafe: s => [...Buffer.from(s, 'base64url')],
+      computeHmacSha256Signature: (value, key) => [...crypto.createHmac('sha256', key).update(value).digest()].map(b => (b > 127 ? b - 256 : b)),   // Java bytes are signed
+      newBlob: bytes => ({ getDataAsString: () => Buffer.from(bytes.map(b => b & 255)).toString('utf8') }),
       formatDate: (date, timeZone, pattern) => {
         if (pattern !== 'yyyy-MM-dd') throw new Error('mock formatDate supports yyyy-MM-dd only');
         return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);

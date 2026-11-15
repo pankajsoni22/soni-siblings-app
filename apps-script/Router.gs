@@ -1,7 +1,7 @@
 /**
  * Entry points and the permission table.
  *
- * Every request: parse → verify the Google token → look up the caller's role → check the
+ * Every request: parse → verify the session or Google token → look up the caller's role → check the
  * role may call the action → run the handler. Writes run under the script lock.
  *
  * Deploy: Execute as "Me", Who has access "Anyone". Ship changes with
@@ -22,6 +22,7 @@ class ApiError extends Error {
  */
 const ACTIONS = {
   me:                 ['ADMIN', 'USER_W', 'USER_RO'],
+  startSession:       ['ADMIN', 'USER_W', 'USER_RO'],
   getConfig:          ['ADMIN', 'USER_W', 'USER_RO'],
   listTransactions:   ['ADMIN', 'USER_W', 'USER_RO'],
   getTransaction:     ['ADMIN', 'USER_W', 'USER_RO'],
@@ -69,7 +70,8 @@ function doGet() {
 
 function dispatch_(action, payload, user) {
   switch (action) {
-    case 'me':                 return user;
+    case 'me':                 return { email: user.email, name: user.name, role: user.role, isOwner: user.isOwner };
+    case 'startSession':       return startSession_(user);
     case 'getConfig':          return getConfig_();
     case 'listTransactions':   return listTransactions_(payload, user);
     case 'getTransaction':     return getTransaction_(payload);

@@ -5,7 +5,10 @@
  */
 
 export type PeriodKey =
-  | 'today' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisFY' | 'lastFY' | 'custom';
+  | 'today' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisFY' | 'lastFY' | 'allTime' | 'custom';
+
+/** Start of the 'allTime' period: earlier than any entry the business has. */
+export const BEGINNING = '2000-01-01';
 
 export interface Period {
   key: PeriodKey;
@@ -25,6 +28,7 @@ export const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: 'lastQuarter', label: 'Last quarter' },
   { key: 'thisFY', label: 'This financial year' },
   { key: 'lastFY', label: 'Last financial year' },
+  { key: 'allTime', label: 'From the beginning' },
   { key: 'custom', label: 'Custom range' }
 ];
 
@@ -113,6 +117,9 @@ export function periodFor(key: PeriodKey, today: string, custom?: { from: string
     case 'lastFY':
       range = fyPeriod(fy - 1);
       break;
+    case 'allTime':
+      range = { from: BEGINNING, to: today, detail: 'All entries to date' };
+      break;
     case 'custom': {
       const a = custom?.from ?? today, b = custom?.to ?? today;
       const [from, to] = a <= b ? [a, b] : [b, a];
@@ -124,8 +131,8 @@ export function periodFor(key: PeriodKey, today: string, custom?: { from: string
 }
 
 const DAY_MS = 864e5;
-const addDays = (date: string, n: number) => new Date(Date.parse(date + 'T00:00:00Z') + n * DAY_MS).toISOString().slice(0, 10);
-const daysBetween = (a: string, b: string) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY_MS);
+export const addDays = (date: string, n: number) => new Date(Date.parse(date + 'T00:00:00Z') + n * DAY_MS).toISOString().slice(0, 10);
+export const daysBetween = (a: string, b: string) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY_MS);
 
 export interface Comparison {
   from: string;
@@ -138,8 +145,9 @@ export interface Comparison {
  * The period to compare against, for "↑ 12% vs last month" figures.
  * Periods still in progress (today, this month/quarter/FY) are compared with the same number of
  * days at the start of the previous period, so a half-finished month isn't compared to a full one.
+ * Null for 'allTime'.
  */
-export function comparisonFor(period: Period, today: string): Comparison {
+export function comparisonFor(period: Period, today: string): Comparison | null {
   const fy = fyStartYear(today);
   const q = fyQuarter(today);
   const { y, m } = parts(today);
@@ -168,6 +176,8 @@ export function comparisonFor(period: Period, today: string): Comparison {
       return toDate(fyPeriod(fy - 1), `vs same point ${fyLabel(fy - 1)}`);
     case 'lastFY':
       return { from: fyPeriod(fy - 2).from, to: fyPeriod(fy - 2).to, label: `vs ${fyLabel(fy - 2)}` };
+    case 'allTime':
+      return null;                        // nothing comes before the beginning
     case 'custom': {
       const length = daysBetween(period.from, period.to) + 1;
       return { from: addDays(period.from, -length), to: addDays(period.from, -1), label: `vs previous ${length} days` };

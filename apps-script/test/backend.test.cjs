@@ -87,6 +87,70 @@ describe('authentication', () => {
   });
 });
 
+describe('sessions', () => {
+  const DAY = 864e5;
+
+  test('a Google sign-in starts a 14-day session that works without calling Google', () => {
+    const env = readyEnv();
+    const s = ok(env.call(tok(OWNER), 'startSession'));
+    assert.ok(s.token.startsWith('s1.'));
+    assert.ok(Math.abs(s.exp - (Date.now() + 14 * DAY)) < 5000);
+    assert.deepEqual(s.user, { email: OWNER, name: 'owner', role: 'ADMIN', isOwner: true });
+    assert.ok(env.props.get('SESSION_SECRET').length >= 64);
+    const before = env.fetches();
+    assert.deepEqual(ok(env.call(s.token, 'me')), s.user);
+    ok(env.call(s.token, 'listUsers'));
+    assert.equal(env.fetches(), before);
+  });
+
+  test('a session cannot start another session', () => {
+    const env = readyEnv();
+    const s = ok(env.call(tok(OWNER), 'startSession'));
+    err(env.call(s.token, 'startSession'), 'FORBIDDEN');
+  });
+
+  test('tampered, foreign and expired sessions are refused', () => {
+    const env = readyEnv();
+    ok(env.call(tok(OWNER), 'saveUser', { email: 'reader@gmail.com', role: 'USER_RO' }));
+    const s = ok(env.call(tok('reader@gmail.com'), 'startSession'));
+    const [, payload, sig] = s.token.split('.');
+    // Same signature, payload claiming to be the owner.
+    const forged = Buffer.from(JSON.stringify({ e: OWNER, n: 'x', x: Date.now() + DAY })).toString('base64url');
+    err(env.call(`s1.${forged}.${sig}`, 'me'), 'AUTH_REQUIRED');
+    err(env.call(`s1.${payload}.${sig.slice(0, -2)}AA`, 'me'), 'AUTH_REQUIRED');
+    err(env.call(`s1.${payload}`, 'me'), 'AUTH_REQUIRED');
+    err(env.call('s1.', 'me'), 'AUTH_REQUIRED');
+
+    // Signed by another deployment's secret.
+    const other = readyEnv();
+    err(other.call(s.token, 'me'), 'AUTH_REQUIRED');
+
+    // Expired: sign an old payload with this deployment's real secret.
+    const old = Buffer.from(JSON.stringify({ e: OWNER, n: 'x', x: Date.now() - 1000 })).toString('base64url');
+    const oldSig = env.run(`sign_(${JSON.stringify(old)})`);
+    err(env.call(`s1.${old}.${oldSig}`, 'me'), 'AUTH_REQUIRED');
+  });
+
+  test('removing a user or changing their role applies to their open session at once', () => {
+    const env = readyEnv();
+    ok(env.call(tok(OWNER), 'saveUser', { email: 'writer@gmail.com', role: 'USER_W' }));
+    const s = ok(env.call(tok('writer@gmail.com'), 'startSession'));
+    assert.equal(ok(env.call(s.token, 'me')).role, 'USER_W');
+    ok(env.call(tok(OWNER), 'saveUser', { email: 'writer@gmail.com', role: 'USER_RO' }));
+    assert.equal(ok(env.call(s.token, 'me')).role, 'USER_RO');
+    err(env.call(s.token, 'setRepaid', { id: 'x', repaidStatus: 'REPAID' }), 'FORBIDDEN');
+    ok(env.call(tok(OWNER), 'removeUser', { email: 'writer@gmail.com' }));
+    err(env.call(s.token, 'me'), 'FORBIDDEN');
+  });
+
+  test('deleting SESSION_SECRET signs everyone out', () => {
+    const env = readyEnv();
+    const s = ok(env.call(tok(OWNER), 'startSession'));
+    env.props.delete('SESSION_SECRET');
+    err(env.call(s.token, 'me'), 'AUTH_REQUIRED');
+  });
+});
+
 describe('roles', () => {
   function team() {
     const env = readyEnv();

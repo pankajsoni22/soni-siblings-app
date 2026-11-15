@@ -446,6 +446,13 @@ button.badge:hover { filter: brightness(0.96); }
 .data-table thead th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .data-table th:first-child { text-align: left; }
 .data-table td { font-variant-numeric: tabular-nums; }
+.table-scroll { max-height: 420px; overflow: auto; }
+.table-scroll thead th { position: sticky; top: 0; background: var(--surface); }
+.chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (max-width: 559px) {
+  .chart-controls { width: 100%; }
+  .chart-controls .segmented button { padding-inline: 10px; }
+}
 
 /* =============================================================================
    Transactions

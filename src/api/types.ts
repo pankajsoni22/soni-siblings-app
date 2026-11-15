@@ -144,7 +144,7 @@ export interface Report {
 }
 
 export type Action =
-  | 'me' | 'getConfig' | 'listTransactions' | 'getTransaction' | 'report'
+  | 'me' | 'startSession' | 'getConfig' | 'listTransactions' | 'getTransaction' | 'report'
   | 'saveTransaction' | 'setRepaid' | 'deleteTransaction' | 'restoreTransaction'
   | 'getHistory' | 'listPartners' | 'savePartners' | 'saveSettings'
   | 'listUsers' | 'saveUser' | 'removeUser';
@@ -161,3 +161,11 @@ export type ApiErrorCode =
 export type ApiResponse<T> =
   | { ok: true; data: T }
   | { ok: false; error: { code: ApiErrorCode; message: string } };
+
+/** An app session: lets the browser skip Google sign-in until `exp` (see apps-script/Session.gs). */
+export interface SessionGrant {
+  token: string;
+  /** Expiry, epoch milliseconds. */
+  exp: number;
+  user: Me;
+}
