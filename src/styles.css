@@ -22,7 +22,7 @@
   --accent-strong: #3730a3;
   --accent-text: #ffffff;
 
-  --danger: #dc2626;
+  --danger: #c81e1e;   /* 5.1:1 on --danger-soft, 5.6:1 on white */
   --danger-soft: #fef2f2;
   --good: #15803d;
   --good-soft: #dcfce7;
@@ -403,13 +403,15 @@ button.badge:hover { filter: brightness(0.96); }
 .delta-down { background: var(--danger-soft); color: var(--danger); }
 .delta-flat { background: var(--surface-2); color: var(--muted); }
 
-/* Phones: chart, partners, recent. Computers: chart and recent on the left, partners on the right. */
-.dash-grid { display: grid; gap: 16px; grid-template-areas: "chart" "partners" "recent"; }
+/* Phones: one column. Computers: trend and partner split side by side, then partner earnings over
+   time beside the recent entries. */
+.dash-grid { display: grid; gap: 16px; grid-template-areas: "chart" "partners" "ptrend" "recent"; }
+.area-ptrend { grid-area: ptrend; min-width: 0; }
 .area-chart { grid-area: chart; min-width: 0; }
 .area-partners { grid-area: partners; min-width: 0; }
 .area-recent { grid-area: recent; min-width: 0; }
 @media (min-width: 1100px) {
-  .dash-grid { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); grid-template-areas: "chart partners" "recent partners"; align-items: start; }
+  .dash-grid { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); grid-template-areas: "chart partners" "ptrend recent"; align-items: start; }
 }
 
 /* Column chart */
@@ -439,6 +441,11 @@ button.badge:hover { filter: brightness(0.96); }
 .legend-row { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--border); }
 .legend-row:first-child { border-top: none; }
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: -6px 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.chart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.chart-svg.has-hover g.is-active .bar { opacity: 1; }
+.chart-tip .legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 2px; }
+.chart-tip-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border); }
 .legend-name { font-weight: 550; overflow-wrap: anywhere; }
 .legend-amount { font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
 .legend-share { font-size: 12.5px; color: var(--muted); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }

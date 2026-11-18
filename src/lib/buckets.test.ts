@@ -3,7 +3,8 @@ import type { Transaction } from '../api/types.ts';
 import { bucketize, chartRange, defaultGrain, grainsFor } from './buckets.ts';
 import { BEGINNING } from './fy.ts';
 
-const txn = (txnDate: string, amount: number, commission: number) => ({ txnDate, amount, commission }) as Transaction;
+const txn = (txnDate: string, amount: number, commission: number, shares: [string, number][] = []) =>
+  ({ txnDate, amount, commission, shares: shares.map(([partnerId, earning]) => ({ partnerId, earning })) }) as Transaction;
 
 describe('grains', () => {
   it('offers daily and weekly for a month, and adds monthly beyond a month', () => {
@@ -48,6 +49,18 @@ describe('bucketize', () => {
     ]);
     expect(weeks[1]).toMatchObject({ label: '2–8 Nov 2026', count: 2 });
     expect(weeks[2]).toMatchObject({ count: 1, lent: 5000 });
+  });
+
+  it('sums each partner\'s earnings per bucket, exactly', () => {
+    const list = [
+      txn('2026-11-02', 1000, 3.01, [['p1', 1.01], ['p2', 1], ['p3', 1]]),
+      txn('2026-11-02', 1000, 0.2, [['p1', 0.1], ['p2', 0.1]]),
+      txn('2026-11-03', 1000, 7, [['p3', 7]])
+    ];
+    const days = bucketize(list, '2026-11-01', '2026-11-03', 'day');
+    expect(days.map(d => d.earnings)).toEqual([{}, { p1: 1.11, p2: 1.1, p3: 1 }, { p3: 7 }]);
+    const weeks = bucketize(list, '2026-11-01', '2026-11-08', 'week');
+    expect(weeks[1]?.earnings).toEqual({ p1: 1.11, p2: 1.1, p3: 8 });
   });
 
   it('labels weeks across months and groups months', () => {

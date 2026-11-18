@@ -1,8 +1,9 @@
 import { ChartColumn, Table2 } from 'lucide-react';
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useRef, useState } from 'react';
 import { GRAIN_LABELS, type Bucket, type Grain } from '../../lib/buckets.ts';
 import { formatINR, formatINRCompact, niceCeil } from '../../lib/money.ts';
 import Money from '../Money.tsx';
+import { barPath, useWidth } from './chartParts.ts';
 
 type Measure = 'commission' | 'lent';
 const MEASURES: { key: Measure; label: string }[] = [
@@ -12,28 +13,6 @@ const MEASURES: { key: Measure; label: string }[] = [
 
 /** With more bars than this, bars are not tab stops (the table view lists them instead). */
 const MAX_FOCUSABLE_BARS = 62;
-
-/** Width of an element: measured before the first paint, then kept up to date on resize. */
-function useWidth(ref: RefObject<HTMLElement | null>, deps: unknown): number {
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => setWidth(Math.floor(el.getBoundingClientRect().width));
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref, deps]);
-  return width;
-}
-
-/** Column with a rounded top (up to 6px) and a square base on the baseline. */
-function barPath(x: number, y: number, w: number, h: number): string {
-  if (h <= 0) return '';
-  const r = Math.min(6, w / 2, h);
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
-}
 
 /**
  * One measure over time as columns, by day, week or month: a single series, so no legend

@@ -6,6 +6,7 @@ import { can } from '../auth/permissions.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import Delta from '../components/charts/Delta.tsx';
 import TrendChart from '../components/charts/TrendChart.tsx';
+import PartnerTrendChart from '../components/charts/PartnerTrendChart.tsx';
 import PartnerEarnings from '../components/charts/PartnerEarnings.tsx';
 import RecentEntries from '../components/charts/RecentEntries.tsx';
 import StatCard from '../components/charts/StatCard.tsx';
@@ -39,13 +40,13 @@ export default function DashboardPage() {
   const p = useMemo(() => (loaded && prevFrom && prevTo ? computeReport(data.txns, prevFrom, prevTo, data.partners).totals : undefined),
     [loaded, data.txns, data.partners, prevFrom, prevTo]);
 
-  // Chart grouping: the default suits the range; a choice sticks until the range changes.
+  // Each chart groups by day, week or month on its own; the default suits the range.
   const range = useMemo(() => chartRange(period.from, period.to, txns), [period.from, period.to, txns]);
-  const grains = grainsFor(range.from, range.to);
-  const [grainChoice, setGrainChoice] = useState<{ range: string; grain: Grain } | null>(null);
-  const rangeKey = `${range.from}:${range.to}`;
-  const grain = grainChoice?.range === rangeKey && grains.includes(grainChoice.grain) ? grainChoice.grain : defaultGrain(range.from, range.to);
-  const buckets = useMemo(() => bucketize(txns, range.from, range.to, grain), [txns, range.from, range.to, grain]);
+  const trend = useGrain(range);
+  const partnerTrend = useGrain(range);
+  const buckets = useMemo(() => bucketize(txns, range.from, range.to, trend.grain), [txns, range.from, range.to, trend.grain]);
+  const partnerBuckets = useMemo(() => bucketize(txns, range.from, range.to, partnerTrend.grain), [txns, range.from, range.to, partnerTrend.grain]);
+  const chartSubtitle = period.key === 'allTime' ? `${formatShortDate(range.from)} – ${formatShortDate(range.to)}` : period.detail;
 
   function exportCsv() {
     downloadCsv(`transactions_${period.from}_${period.to}.csv`, transactionsToCsv(txns, partnerColumnsOf(txns)));
@@ -99,9 +100,7 @@ export default function DashboardPage() {
           <div className="dash-grid">
             <div className="area-chart">
               {txns.length > 0 && (
-                <TrendChart buckets={buckets} grain={grain} grains={grains}
-                  onGrainChange={g => setGrainChoice({ range: rangeKey, grain: g })}
-                  subtitle={period.key === 'allTime' ? `${formatShortDate(range.from)} – ${formatShortDate(range.to)}` : period.detail} />
+                <TrendChart buckets={buckets} grain={trend.grain} grains={trend.grains} onGrainChange={trend.choose} subtitle={chartSubtitle} />
               )}
             </div>
             <div className="card area-partners">
@@ -114,6 +113,12 @@ export default function DashboardPage() {
               {r.byPartner.length ? <PartnerEarnings rows={r.byPartner} total={r.totals.commission} />
                 : <EmptyState title="No partners yet">An admin adds partners on the Partners page.</EmptyState>}
             </div>
+            {txns.length > 0 && r.byPartner.length > 0 && (
+              <div className="area-ptrend">
+                <PartnerTrendChart buckets={partnerBuckets} partners={r.byPartner} grain={partnerTrend.grain}
+                  grains={partnerTrend.grains} onGrainChange={partnerTrend.choose} subtitle={chartSubtitle} />
+              </div>
+            )}
             <div className="area-recent">
               <RecentEntries txns={txns} periodQuery={periodQuery} />
             </div>
@@ -122,4 +127,13 @@ export default function DashboardPage() {
       )}
     </section>
   );
+}
+
+/** A chart's day / week / month choice: starts at the default for the range; a pick sticks until the range changes. */
+function useGrain(range: { from: string; to: string }) {
+  const grains = grainsFor(range.from, range.to);
+  const key = `${range.from}:${range.to}`;
+  const [choice, setChoice] = useState<{ key: string; grain: Grain } | null>(null);
+  const grain = choice?.key === key && grains.includes(choice.grain) ? choice.grain : defaultGrain(range.from, range.to);
+  return { grain, grains, choose: (g: Grain) => setChoice({ key, grain: g }) };
 }

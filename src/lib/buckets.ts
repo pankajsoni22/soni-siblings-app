@@ -21,6 +21,8 @@ export interface Bucket {
   lent: number;
   commission: number;
   count: number;
+  /** Each partner's earning in this bucket, by partner id (partners who earned nothing are absent). */
+  earnings: Record<string, number>;
 }
 
 /** More bars than this stop being readable, so that grain is not offered. */
@@ -66,7 +68,7 @@ function weekStart(date: string): string {
 function emptyBuckets(from: string, to: string, grain: Grain): Bucket[] {
   const out: Bucket[] = [];
   const add = (a: string, b: string, short: string, label: string) =>
-    out.push({ from: a, to: b, short, label, lent: 0, commission: 0, count: 0 });
+    out.push({ from: a, to: b, short, label, lent: 0, commission: 0, count: 0, earnings: {} });
 
   if (grain === 'day') {
     for (let d = from; d <= to; d = addDays(d, 1)) add(d, d, dayMonth(d), formatShortDate(d));
@@ -98,7 +100,7 @@ const paise = (rupees: number) => Math.round(rupees * 100);
 /** Every bucket in from..to (empty ones included, so gaps show), with the transactions summed in. */
 export function bucketize(txns: Transaction[], from: string, to: string, grain: Grain): Bucket[] {
   const buckets = emptyBuckets(from, to, grain);
-  const sums = buckets.map(() => ({ lent: 0, commission: 0, count: 0 }));
+  const sums = buckets.map(() => ({ lent: 0, commission: 0, count: 0, earnings: new Map<string, number>() }));
   for (const t of txns) {
     if (t.txnDate < from || t.txnDate > to) continue;
     // Buckets are in date order, so binary-search the last one starting on or before the date.
@@ -112,9 +114,13 @@ export function bucketize(txns: Transaction[], from: string, to: string, grain: 
     s.lent += paise(t.amount);
     s.commission += paise(t.commission);
     s.count += 1;
+    for (const sh of t.shares) s.earnings.set(sh.partnerId, (s.earnings.get(sh.partnerId) ?? 0) + paise(sh.earning));
   }
   return buckets.map((b, i) => {
-    const s = sums[i] ?? { lent: 0, commission: 0, count: 0 };
-    return { ...b, lent: s.lent / 100, commission: s.commission / 100, count: s.count };
+    const s = sums[i];
+    if (!s) return b;
+    const earnings: Record<string, number> = {};
+    for (const [id, p] of s.earnings) earnings[id] = p / 100;
+    return { ...b, lent: s.lent / 100, commission: s.commission / 100, count: s.count, earnings };
   });
 }
